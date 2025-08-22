@@ -3,17 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Tree - Corrected</title>
+    <title>Project Janus</title>
     <style>
-        body { font-family: sans-serif; display: flex; padding: 20px; background-color: #f9f9f9; }
+        body { font-family: sans-serif; display: flex; padding: 20px; background-color: #f9f9f9; margin: 0; }
         #sidebar { width: 300px; border: 1px solid #ccc; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         #project-tree { list-style: none; padding: 0; }
         #project-tree ul { list-style: none; padding-left: 20px; }
         .project-item { padding: 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; }
         .project-item:hover { background-color: #f0f0f0; }
         .project-item.active { background-color: #e0e0ff; font-weight: bold; }
-        .toggle { margin-right: 8px; width: 16px; text-align: center; font-size: 10px; user-select: none; /* Prevents text selection */ }
+        .toggle { margin-right: 8px; width: 16px; text-align: center; font-size: 10px; user-select: none; }
         #new-project-btn { margin-bottom: 10px; }
+        
+        /* Modal Styles */
+        .modal-backdrop {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); display: flex;
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-content {
+            background-color: white; padding: 20px 30px; border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 400px;
+        }
+        .modal-content h3 { margin-top: 0; }
+        .modal-content input {
+            width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-actions button {
+            padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;
+        }
+        .modal-actions button[type="submit"] {
+            background-color: #e0e0ff; border-color: #c0c0ff; font-weight: bold;
+        }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -29,8 +53,22 @@
         <p id="current-project-name">None</p>
     </div>
 
+    <div id="new-project-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <h3>Create New Project</h3>
+            <form id="new-project-form">
+                <label for="new-project-name">Project Name</label>
+                <input type="text" id="new-project-name" name="projectName" required autocomplete="off">
+                <div class="modal-actions">
+                    <button type="button" id="cancel-btn">Cancel</button>
+                    <button type="submit">Create Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script type="module">
-        // --- DATA STORE (Using localStorage for simplicity) ---
+        // --- DATA STORE ---
         const projectService = {
             getAll: async () => JSON.parse(localStorage.getItem('janus_projects')) || [],
             add: async (data) => {
@@ -44,16 +82,18 @@
         // --- GLOBAL STATE ---
         let allProjects = [];
         let currentProjectId = null;
-        let expandedProjects = new Set(); // Keep track of which projects are open
+        let expandedProjects = new Set();
+        const newProjectModal = document.getElementById('new-project-modal');
+        const newProjectForm = document.getElementById('new-project-form');
+        const newProjectNameInput = document.getElementById('new-project-name');
+        const cancelBtn = document.getElementById('cancel-btn');
 
         // --- CORE FUNCTIONS ---
         async function renderProjectTree() {
             allProjects = await projectService.getAll();
             const treeEl = document.getElementById('project-tree');
             treeEl.innerHTML = '';
-
             const projectMap = new Map(allProjects.map(p => [p.id, { ...p, children: [] }]));
-            
             const rootProjects = [];
             projectMap.forEach(project => {
                 if (project.parentId && projectMap.has(project.parentId)) {
@@ -62,7 +102,6 @@
                     rootProjects.push(project);
                 }
             });
-            
             rootProjects.sort((a,b) => a.name.localeCompare(b.name)).forEach(project => {
                 treeEl.appendChild(createProjectNode(project));
             });
@@ -72,19 +111,12 @@
             const li = document.createElement('li');
             li.dataset.id = project.id;
             const hasChildren = project.children && project.children.length > 0;
-
             const projectItemDiv = document.createElement('div');
             projectItemDiv.className = 'project-item';
             projectItemDiv.dataset.id = project.id;
-            if (project.id === currentProjectId) {
-                projectItemDiv.classList.add('active');
-            }
-            projectItemDiv.innerHTML = `
-                <span class="toggle">${hasChildren ? '▶' : '•'}</span>
-                <span>${project.name}</span>
-            `;
+            if (project.id === currentProjectId) projectItemDiv.classList.add('active');
+            projectItemDiv.innerHTML = `<span class="toggle">${hasChildren ? '▶' : '•'}</span><span>${project.name}</span>`;
             li.appendChild(projectItemDiv);
-
             if (hasChildren) {
                 const ul = document.createElement('ul');
                 ul.style.display = expandedProjects.has(project.id) ? 'block' : 'none';
@@ -97,11 +129,9 @@
             return li;
         }
         
-        // ** NEW EFFICIENT FUNCTION TO ADD A SINGLE NODE TO THE DOM **
         function addProjectNodeToDOM(project) {
             const newNode = createProjectNode({ ...project, children: [] });
             let parentElement;
-
             if (project.parentId) {
                 const parentLi = document.querySelector(`li[data-id="${project.parentId}"]`);
                 parentElement = parentLi.querySelector('ul');
@@ -116,10 +146,7 @@
             } else {
                 parentElement = document.getElementById('project-tree');
             }
-
             parentElement.appendChild(newNode);
-            
-            // Re-sort the immediate children to maintain alphabetical order
             const children = Array.from(parentElement.children);
             children.sort((a, b) => a.textContent.trim().localeCompare(b.textContent.trim()));
             children.forEach(child => parentElement.appendChild(child));
@@ -129,21 +156,18 @@
             currentProjectId = projectId;
             const project = allProjects.find(p => p.id === projectId);
             document.getElementById('current-project-name').textContent = project ? project.name : 'None';
-            
             document.querySelectorAll('.project-item').forEach(item => {
                 item.classList.toggle('active', item.dataset.id === projectId);
             });
         }
 
         // --- EVENT LISTENERS ---
-        document.getElementById('sidebar').addEventListener('click', async (e) => {
+        document.getElementById('sidebar').addEventListener('click', (e) => {
             const projectItem = e.target.closest('.project-item');
             const newProjectBtn = e.target.closest('#new-project-btn');
-
             if (projectItem) {
                 const projectId = projectItem.dataset.id;
                 selectProject(projectId);
-                
                 const sublist = projectItem.nextElementSibling;
                 if (sublist && sublist.tagName === 'UL') {
                     if (sublist.style.display === 'none') {
@@ -157,36 +181,42 @@
                     }
                 }
             } else if (newProjectBtn) {
-                const name = prompt("Enter new project name:");
-                if (name) {
-                    const newProjectData = { name, parentId: currentProjectId || null };
-                    const newProject = await projectService.add(newProjectData);
-                    allProjects.push(newProject); // Update in-memory cache
+                newProjectModal.classList.remove('hidden');
+                newProjectNameInput.focus();
+            }
+        });
 
-                    if (currentProjectId) {
-                        expandedProjects.add(currentProjectId);
-                    }
-                    
-                    // ** FIX: Call the efficient function instead of the full re-render **
-                    addProjectNodeToDOM(newProject);
-                    
-                    selectProject(newProject.id);
-                }
+        function hideModal() {
+            newProjectModal.classList.add('hidden');
+            newProjectForm.reset();
+        }
+
+        cancelBtn.addEventListener('click', hideModal);
+        newProjectModal.addEventListener('click', (e) => {
+            if (e.target === newProjectModal) hideModal();
+        });
+
+        newProjectForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = newProjectNameInput.value.trim();
+            if (name) {
+                const newProjectData = { name, parentId: currentProjectId || null };
+                const newProject = await projectService.add(newProjectData);
+                allProjects.push(newProject);
+                if (currentProjectId) expandedProjects.add(currentProjectId);
+                addProjectNodeToDOM(newProject);
+                selectProject(newProject.id);
+                hideModal();
             }
         });
 
         // --- INITIALIZATION ---
         async function initializeApp() {
-            // The following line clears all data on refresh.
-            // Comment it out for data to persist between sessions.
-            // localStorage.removeItem('janus_projects');
-            
-            // Check if there are any projects, if not, create a default one.
+            // localStorage.removeItem('janus_projects'); // Uncomment to clear data on refresh
             const existingProjects = await projectService.getAll();
             if (existingProjects.length === 0) {
                  await projectService.add({ name: 'Main Project Alpha', parentId: null });
             }
-
             await renderProjectTree();
             if (allProjects.length > 0) {
                  selectProject(allProjects[0].id);
