@@ -9,9 +9,12 @@
         #sidebar { width: 300px; border: 1px solid #ccc; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; }
         #project-tree { list-style: none; padding: 0; }
         #project-tree ul { list-style: none; padding-left: 20px; }
-        .project-item { padding: 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; }
+        .project-item { 
+            padding: 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; 
+        }
         .project-item:hover { background-color: #f0f0f0; }
         .project-item.active { background-color: #e0e0ff; font-weight: bold; }
+        .project-name-wrapper { display: flex; align-items: center; }
         .toggle { margin-right: 8px; width: 16px; text-align: center; font-size: 10px; user-select: none; }
         
         .sidebar-actions {
@@ -26,10 +29,19 @@
             border: 1px solid #ccc;
             cursor: pointer;
         }
-        #delete-project-btn {
-            background-color: #d9534f;
-            color: white;
-            border-color: #d9534f;
+        .project-actions {
+            display: none; /* Hidden by default */
+            gap: 5px;
+        }
+        .project-item:hover .project-actions {
+            display: flex; /* Show on hover */
+        }
+        .project-action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 2px 4px;
         }
 
         /* Modal Styles */
@@ -123,7 +135,6 @@
         <h2>Projects</h2>
         <div class="sidebar-actions">
             <button id="new-project-btn">New Project</button>
-            <button id="delete-project-btn" class="hidden">Delete</button>
         </div>
         <p><small>Select a project to create a sub-project under it.</small></p>
         <ul id="project-tree"></ul>
@@ -228,6 +239,14 @@
                 const remainingProjects = projects.filter(p => !projectsToDelete.has(p.id));
                 await projectService.saveAll(remainingProjects);
             },
+            renameProject: async (projectId, newName) => {
+                const projects = await projectService.getAll();
+                const project = projects.find(p => p.id === projectId);
+                if (project) {
+                    project.name = newName;
+                    await projectService.saveAll(projects);
+                }
+            },
             addDocument: async (projectId, docData) => {
                 const projects = await projectService.getAll();
                 const project = projects.find(p => p.id === projectId);
@@ -274,7 +293,6 @@
         let expandedProjects = new Set();
         const tabContainer = document.querySelector('.tab-container');
         const teamListEl = document.getElementById('team-list');
-        const deleteProjectBtn = document.getElementById('delete-project-btn');
         
         // Modal Elements
         const modal = document.getElementById('generic-modal');
@@ -381,9 +399,18 @@
             const hasChildren = project.children && project.children.length > 0;
             const projectItemDiv = document.createElement('div');
             projectItemDiv.className = 'project-item';
-            projectItemDiv.dataset.id = project.id;
+            
             if (project.id === currentProjectId) projectItemDiv.classList.add('active');
-            projectItemDiv.innerHTML = `<span class="toggle">${hasChildren ? '▶' : '•'}</span><span>${project.name}</span>`;
+            projectItemDiv.innerHTML = `
+                <div class="project-name-wrapper" data-action="select">
+                    <span class="toggle">${hasChildren ? '▶' : '•'}</span>
+                    <span>${project.name}</span>
+                </div>
+                <div class="project-actions">
+                    <button class="project-action-btn" data-action="rename" title="Rename Project">✏️</button>
+                    <button class="project-action-btn" data-action="delete" title="Delete Project">🗑️</button>
+                </div>
+            `;
             li.appendChild(projectItemDiv);
             if (hasChildren) {
                 const ul = document.createElement('ul');
@@ -423,13 +450,13 @@
             currentProjectId = projectId;
             const project = allProjects.find(p => p.id === projectId);
             document.getElementById('current-project-name').textContent = project ? project.name : 'None';
-            deleteProjectBtn.classList.toggle('hidden', !project);
+            
             renderDocuments(projectId);
             renderTeam(projectId);
             renderComms(projectId);
-            document.querySelectorAll('.project-item').forEach(item => {
-                item.classList.toggle('active', item.dataset.id === projectId);
-            });
+            
+            // Re-render tree to update active state
+            renderProjectTree();
         }
 
         function renderDocuments(projectId) {
@@ -492,21 +519,10 @@
 
         // --- EVENT LISTENERS ---
         document.getElementById('sidebar').addEventListener('click', (e) => {
-            const projectItem = e.target.closest('.project-item');
             const newProjectBtn = e.target.closest('#new-project-btn');
-            const deleteBtn = e.target.closest('#delete-project-btn');
-
-            if (projectItem) {
-                selectProject(projectItem.dataset.id);
-                const sublist = projectItem.nextElementSibling;
-                if (sublist && sublist.tagName === 'UL') {
-                    const isHidden = sublist.style.display === 'none';
-                    sublist.style.display = isHidden ? 'block' : 'none';
-                    projectItem.querySelector('.toggle').textContent = isHidden ? '▼' : '▶';
-                    if(isHidden) expandedProjects.add(projectItem.dataset.id);
-                    else expandedProjects.delete(projectItem.dataset.id);
-                }
-            } else if (newProjectBtn) {
+            const actionTarget = e.target.closest('[data-action]');
+            
+            if (newProjectBtn) {
                 showModal({
                     title: 'Create New Project',
                     inputs: [{ label: 'Project Name' }],
@@ -520,21 +536,56 @@
                         selectProject(newProject.id);
                     }
                 });
-            } else if (deleteBtn) {
-                 if (!currentProjectId) return;
-                const project = allProjects.find(p => p.id === currentProjectId);
-                showModal({
-                    title: 'Delete Project',
-                    message: `Are you sure you want to delete "${project.name}" and all its sub-projects? This action cannot be undone.`,
-                    confirmText: 'Delete',
-                    danger: true
-                }).then(async ({ confirmed }) => {
-                    if (confirmed) {
-                        await projectService.deleteProject(currentProjectId);
-                        currentProjectId = null;
-                        initializeApp();
-                    }
-                });
+                return;
+            }
+
+            if (actionTarget) {
+                const action = actionTarget.dataset.action;
+                const projectItem = actionTarget.closest('.project-item');
+                const projectId = projectItem.parentElement.dataset.id;
+                const project = allProjects.find(p => p.id === projectId);
+
+                switch (action) {
+                    case 'select':
+                        selectProject(projectId);
+                        const sublist = projectItem.parentElement.querySelector('ul');
+                        if (sublist) {
+                            const isHidden = sublist.style.display === 'none';
+                            sublist.style.display = isHidden ? 'block' : 'none';
+                            projectItem.querySelector('.toggle').textContent = isHidden ? '▼' : '▶';
+                            if (isHidden) expandedProjects.add(projectId);
+                            else expandedProjects.delete(projectId);
+                        }
+                        break;
+                    
+                    case 'rename':
+                        showModal({
+                            title: `Rename "${project.name}"`,
+                            inputs: [{ label: 'New Project Name', value: project.name }],
+                            confirmText: 'Rename'
+                        }).then(async ({ confirmed, inputs }) => {
+                            if (confirmed && inputs[0]) {
+                                await projectService.renameProject(projectId, inputs[0]);
+                                renderProjectTree();
+                            }
+                        });
+                        break;
+
+                    case 'delete':
+                        showModal({
+                            title: 'Delete Project',
+                            message: `Are you sure you want to delete "${project.name}" and all its sub-projects? This action cannot be undone.`,
+                            confirmText: 'Delete',
+                            danger: true
+                        }).then(async ({ confirmed }) => {
+                            if (confirmed) {
+                                await projectService.deleteProject(projectId);
+                                if (currentProjectId === projectId) currentProjectId = null;
+                                initializeApp();
+                            }
+                        });
+                        break;
+                }
             }
         });
         
@@ -623,11 +674,14 @@
             }
             await renderProjectTree();
             
-            if (allProjects.length > 0) {
+            if (!currentProjectId && allProjects.length > 0) {
                  const firstProjectId = allProjects.find(p => !p.parentId)?.id || allProjects[0].id;
                  selectProject(firstProjectId);
-            } else {
+            } else if (allProjects.length === 0) {
                 selectProject(null);
+            } else {
+                // Reselect the current project to refresh the view
+                selectProject(currentProjectId);
             }
         }
 
