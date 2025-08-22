@@ -38,6 +38,41 @@
             background-color: #e0e0ff; border-color: #c0c0ff; font-weight: bold;
         }
         .hidden { display: none; }
+
+        /* Tab Styles */
+        .tab-container {
+            display: flex;
+            border-bottom: 2px solid #ccc;
+            margin-top: 20px;
+        }
+        .tab-button {
+            padding: 10px 20px;
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            font-size: 16px;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px; /* Aligns with the container's bottom border */
+        }
+        .tab-button:hover {
+            background-color: #f0f0f0;
+        }
+        .tab-button.active {
+            border-color: #007bff;
+            font-weight: bold;
+        }
+        .tab-panel {
+            display: none; /* Hide all panels by default */
+            padding-top: 20px;
+        }
+        .tab-panel.active {
+            display: block; /* Show only the active panel */
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
@@ -48,9 +83,41 @@
         <p><small>Select a project to create a sub-project under it.</small></p>
         <ul id="project-tree"></ul>
     </div>
-    <div id="main-content" style="padding-left: 20px;">
+    
+    <div id="main-content" style="padding-left: 20px; flex-grow: 1;">
         <h3>Selected Project:</h3>
         <p id="current-project-name">None</p>
+    
+        <div class="tab-container">
+            <button class="tab-button active" data-tab="kanban-panel">Kanban</button>
+            <button class="tab-button" data-tab="documents-panel">Documents</button>
+            <button class="tab-button" data-tab="communication-panel">Communication</button>
+            <button class="tab-button" data-tab="team-panel">Team</button>
+        </div>
+    
+        <div class="tab-content-container">
+            <div class="tab-panel active" id="kanban-panel">
+                <h4>Kanban Board is loaded here.</h4>
+            </div>
+    
+            <div class="tab-panel" id="documents-panel">
+                <div class="panel-header">
+                    <h4>Project Documents</h4>
+                    <button id="add-document-btn">Add Document</button>
+                </div>
+                <ul id="document-list">
+                    <li>No documents yet.</li>
+                </ul>
+            </div>
+    
+            <div class="tab-panel" id="communication-panel">
+                <h4>Communication is loaded here.</h4>
+            </div>
+    
+            <div class="tab-panel" id="team-panel">
+                <h4>Team is loaded here.</h4>
+            </div>
+        </div>
     </div>
 
     <div id="new-project-modal" class="modal-backdrop hidden">
@@ -163,7 +230,7 @@
 
         // --- EVENT LISTENERS ---
         document.getElementById('sidebar').addEventListener('click', (e) => {
-            const projectItem = e.target.closest('.project-item');
+            const projectItem = e.targe.closest('.project-item');
             const newProjectBtn = e.target.closest('#new-project-btn');
             if (projectItem) {
                 const projectId = projectItem.dataset.id;
