@@ -7,15 +7,42 @@
     <style>
         body { font-family: sans-serif; display: flex; padding: 20px; background-color: #f9f9f9; margin: 0; }
         #sidebar { width: 300px; border: 1px solid #ccc; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; }
-        #project-tree { list-style: none; padding: 0; }
+        
+        /* Main Navigation Styles */
+        #main-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .main-nav-item {
+            padding: 12px 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .main-nav-item:hover {
+            background-color: #f0f0f0;
+        }
+        .main-nav-item.active {
+            background-color: #e0e0ff;
+            font-weight: bold;
+        }
+        #project-tree-container {
+            padding-left: 20px;
+        }
+
+        #project-tree { list-style: none; padding: 0; margin-top: 10px; }
         #project-tree ul { list-style: none; padding-left: 20px; }
         .project-item { 
             padding: 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; 
         }
         .project-item:hover { background-color: #f0f0f0; }
-        .project-item.active { background-color: #e0e0ff; font-weight: bold; }
-        .project-name-wrapper { display: flex; align-items: center; }
+        .project-item.active { background-color: #d0d0ff; }
+        .project-name-wrapper { display: flex; align-items: center; flex-grow: 1; min-width: 0; }
+        .project-name-wrapper span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .toggle { margin-right: 8px; width: 16px; text-align: center; font-size: 10px; user-select: none; }
+        .project-icon { margin-right: 8px; }
         
         .sidebar-actions {
             display: flex;
@@ -23,25 +50,20 @@
             margin-bottom: 10px;
         }
         .sidebar-actions button {
-            flex-grow: 1;
-            padding: 8px;
+            padding: 8px 12px;
             border-radius: 4px;
             border: 1px solid #ccc;
             cursor: pointer;
         }
         .project-actions {
-            display: none; /* Hidden by default */
+            display: none;
             gap: 5px;
         }
         .project-item:hover .project-actions {
-            display: flex; /* Show on hover */
+            display: flex;
         }
         .project-action-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
-            padding: 2px 4px;
+            background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 4px;
         }
 
         /* Modal Styles */
@@ -52,13 +74,14 @@
         }
         .modal-content {
             background-color: white; padding: 20px 30px; border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 450px;
         }
         .modal-content h3 { margin-top: 0; }
-        .modal-content input, .modal-content textarea {
+        .modal-content input, .modal-content textarea, .modal-content select {
             width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 15px;
             box-sizing: border-box;
         }
+        .modal-content textarea { min-height: 80px; resize: vertical; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
         .modal-actions button {
             padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;
@@ -78,107 +101,185 @@
             margin-top: 20px;
         }
         .tab-button {
-            padding: 10px 20px;
-            border: none;
-            background-color: transparent;
-            cursor: pointer;
-            font-size: 16px;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -2px;
+            padding: 10px 20px; border: none; background-color: transparent; cursor: pointer;
+            font-size: 16px; border-bottom: 2px solid transparent; margin-bottom: -2px;
         }
-        .tab-button:hover {
-            background-color: #f0f0f0;
-        }
-        .tab-button.active {
-            border-color: #007bff;
-            font-weight: bold;
-        }
-        .tab-panel {
-            display: none;
-            padding-top: 20px;
-        }
-        .tab-panel.active {
-            display: block;
-        }
+        .tab-button:hover { background-color: #f0f0f0; }
+        .tab-button.active { border-color: #007bff; font-weight: bold; }
+        
+        .main-panel, .tab-panel { display: none; }
+        .main-panel.active, .tab-panel.active { display: block; }
+        
+        .tab-panel { padding-top: 20px; }
         .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        #document-list a {
-            text-decoration: none;
-            color: #007bff;
-        }
-        #document-list a:hover {
-            text-decoration: underline;
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
         }
         .list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px;
-            border-bottom: 1px solid #eee;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px; border-bottom: 1px solid #eee;
         }
         .remove-btn {
             background: none; border: none; color: red; cursor: pointer; font-size: 16px;
         }
-        .comm-log-item small {
-            color: #666;
-            margin-left: 15px;
-            flex-shrink: 0;
+        .comm-log-item small { color: #666; margin-left: 15px; flex-shrink: 0; }
+
+        /* Kanban Styles */
+        .kanban-board { display: flex; gap: 20px; width: 100%; overflow-x: auto; }
+        .kanban-column {
+            flex: 1; min-width: 250px; background-color: #f4f5f7; border-radius: 8px; padding: 10px;
         }
+        .kanban-column h4 { margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid #ccc; }
+        .kanban-tasks { min-height: 200px; display: flex; flex-direction: column; gap: 10px; }
+        .task-card {
+            background-color: #fff; padding: 15px; border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: grab; border-left: 5px solid transparent;
+        }
+        .task-card.priority-high { border-left-color: #d9534f; }
+        .task-card.priority-medium { border-left-color: #f0ad4e; }
+        .task-card.priority-low { border-left-color: #5cb85c; }
+        .task-card .task-name { font-weight: bold; margin-bottom: 10px; }
+        .task-card .task-details { font-size: 12px; color: #555; }
+        .task-card.dragging { opacity: 0.5; }
+        .drag-over { background-color: #e0e0ff; }
+        
+        /* Calendar Styles */
+        #calendar-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+        }
+        #calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+        .calendar-day {
+            border: 1px solid #ccc; min-height: 100px; padding: 5px; background-color: #fff;
+        }
+        .calendar-day-header { font-weight: bold; text-align: center; padding-bottom: 5px; }
+        .calendar-day-number { font-size: 12px; color: #555; }
+        .calendar-task {
+            font-size: 11px; padding: 2px 4px; border-radius: 3px; background-color: #e0e0ff;
+            margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        
+        /* Contacts Styles */
+        #contact-list { list-style: none; padding: 0; }
+        .contact-item {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .contact-info div { margin-bottom: 5px; }
+        .contact-info .contact-name { font-weight: bold; }
+        .contact-info .contact-company { color: #555; font-style: italic; }
+        .contact-channels { font-size: 12px; color: #777; }
+        .contact-channels span { margin-right: 5px; }
+        .contact-actions { display: flex; gap: 10px; }
     </style>
 </head>
 <body>
 
     <div id="sidebar">
-        <h2>Projects</h2>
-        <div class="sidebar-actions">
-            <button id="new-project-btn">New Project</button>
-        </div>
-        <p><small>Select a project to create a sub-project under it.</small></p>
-        <ul id="project-tree"></ul>
+        <h2>Janus</h2>
+        <ul id="main-nav">
+            <li class="main-nav-item active" data-panel="project-panel">📁 Projects</li>
+            <div id="project-tree-container">
+                 <div class="sidebar-actions">
+                    <button id="new-project-btn">New Project</button>
+                </div>
+                <p><small>Select a project to create a sub-project under it.</small></p>
+                <ul id="project-tree"></ul>
+            </div>
+            <li class="main-nav-item" data-panel="calendar-panel">📅 Calendar</li>
+            <li class="main-nav-item" data-panel="contacts-panel">👥 Contacts</li>
+            <li class="main-nav-item" data-panel="invoices-panel">🧾 Invoices</li>
+        </ul>
     </div>
     
     <div id="main-content" style="padding-left: 20px; flex-grow: 1;">
-        <h3>Selected Project:</h3>
-        <p id="current-project-name">None</p>
-    
-        <div class="tab-container">
-            <button class="tab-button active" data-tab="tasks-panel">Tasks</button>
-            <button class="tab-button" data-tab="documents-panel">Documents</button>
-            <button class="tab-button" data-tab="communication-panel">Communication</button>
-            <button class="tab-button" data-tab="team-panel">Team</button>
+        <div class="main-panel active" id="project-panel">
+            <h3>Selected Project:</h3>
+            <p id="current-project-name">None</p>
+        
+            <div class="tab-container" id="project-tabs">
+                <button class="tab-button active" data-tab="tasks-panel">Tasks</button>
+                <button class="tab-button" data-tab="documents-panel">Documents</button>
+                <button class="tab-button" data-tab="communication-panel">Communication</button>
+                <button class="tab-button" data-tab="team-panel">Team</button>
+            </div>
+        
+            <div class="tab-content-container">
+                <div class="tab-panel active" id="tasks-panel">
+                     <div class="panel-header">
+                        <h4>Task Board</h4>
+                        <button id="add-task-btn">New Task</button>
+                    </div>
+                    <div class="kanban-board">
+                        <div class="kanban-column" data-status="mytodo">
+                            <h4>My To Do</h4>
+                            <div class="kanban-tasks"></div>
+                        </div>
+                         <div class="kanban-column" data-status="assignedtodo">
+                            <h4>Assigned To Do</h4>
+                            <div class="kanban-tasks"></div>
+                        </div>
+                        <div class="kanban-column" data-status="inprogress">
+                            <h4>In Progress</h4>
+                            <div class="kanban-tasks"></div>
+                        </div>
+                        <div class="kanban-column" data-status="done">
+                            <h4>Done</h4>
+                            <div class="kanban-tasks"></div>
+                        </div>
+                    </div>
+                </div>
+        
+                <div class="tab-panel" id="documents-panel">
+                    <div class="panel-header">
+                        <h4>Project Documents</h4>
+                        <button id="add-document-btn">Add Document</button>
+                    </div>
+                    <ul id="document-list"></ul>
+                </div>
+        
+                <div class="tab-panel" id="communication-panel">
+                    <div class="panel-header">
+                        <h4>Communication Log</h4>
+                        <button id="add-comm-btn">Add Log Entry</button>
+                    </div>
+                    <ul id="comm-list"></ul>
+                </div>
+        
+                <div class="tab-panel" id="team-panel">
+                    <div class="panel-header">
+                        <h4>Team Members</h4>
+                        <button id="add-member-btn">Add Member</button>
+                    </div>
+                    <ul id="team-list"></ul>
+                </div>
+            </div>
         </div>
-    
-        <div class="tab-content-container">
-            <div class="tab-panel active" id="tasks-panel">
-                <h4>Task management board goes here.</h4>
+        <div class="main-panel" id="calendar-panel">
+            <div id="calendar-header">
+                <button id="prev-month-btn">&lt;</button>
+                <h3 id="month-year-display">Month Year</h3>
+                <button id="next-month-btn">&gt;</button>
             </div>
-    
-            <div class="tab-panel" id="documents-panel">
-                <div class="panel-header">
-                    <h4>Project Documents</h4>
-                    <button id="add-document-btn">Add Document</button>
-                </div>
-                <ul id="document-list"></ul>
+            <div id="calendar-grid"></div>
+        </div>
+        <div class="main-panel" id="contacts-panel">
+            <div class="panel-header">
+                <h2>Contacts (CRM)</h2>
+                <button id="add-contact-btn">Add Contact</button>
             </div>
-    
-            <div class="tab-panel" id="communication-panel">
-                <div class="panel-header">
-                    <h4>Communication Log</h4>
-                    <button id="add-comm-btn">Add Log Entry</button>
-                </div>
-                <ul id="comm-list"></ul>
+            <ul id="contact-list"></ul>
+        </div>
+        <div class="main-panel" id="invoices-panel">
+            <div class="panel-header">
+                <h2>Invoices</h2>
+                <button>Create Invoice</button>
             </div>
-    
-            <div class="tab-panel" id="team-panel">
-                <div class="panel-header">
-                    <h4>Team Members</h4>
-                    <button id="add-member-btn">Add Member</button>
-                </div>
-                <ul id="team-list"></ul>
-            </div>
+            <p>Invoice management system will be built here.</p>
         </div>
     </div>
 
@@ -189,14 +290,7 @@
             <p id="modal-message" class="hidden"></p>
             <form id="modal-form">
                 <div id="modal-input-container">
-                    <div id="modal-input-group-1" class="hidden">
-                        <label id="modal-input-label-1" for="modal-input-1">Label 1</label>
-                        <input type="text" id="modal-input-1" autocomplete="off">
-                    </div>
-                    <div id="modal-input-group-2" class="hidden">
-                        <label id="modal-input-label-2" for="modal-input-2">Label 2</label>
-                        <input type="text" id="modal-input-2" autocomplete="off">
-                    </div>
+                    <!-- JS will generate inputs here -->
                 </div>
                 <div class="modal-actions">
                     <button type="button" id="modal-cancel-btn">Cancel</button>
@@ -215,7 +309,8 @@
                 const projects = await projectService.getAll();
                 const newProject = { 
                     id: `proj_${crypto.randomUUID()}`, 
-                    documents: [], team: [], comms: [],
+                    documents: [], team: [], comms: [], tasks: [],
+                    icon: getIconForProjectName(data.name),
                     ...data 
                 };
                 projects.push(newProject);
@@ -244,6 +339,7 @@
                 const project = projects.find(p => p.id === projectId);
                 if (project) {
                     project.name = newName;
+                    project.icon = getIconForProjectName(newName);
                     await projectService.saveAll(projects);
                 }
             },
@@ -256,20 +352,20 @@
                 await projectService.saveAll(projects);
                 return newDocument;
             },
-            addTeamMember: async (projectId, memberName) => {
+            addTeamMember: async (projectId, contactId) => {
                 const projects = await projectService.getAll();
                 const project = projects.find(p => p.id === projectId);
                 if (!project) return null;
-                const newMember = { id: `mem_${crypto.randomUUID()}`, name: memberName };
-                project.team.push(newMember);
-                await projectService.saveAll(projects);
-                return newMember;
+                if (!project.team.includes(contactId)) {
+                    project.team.push(contactId);
+                    await projectService.saveAll(projects);
+                }
             },
-            removeTeamMember: async (projectId, memberId) => {
+            removeTeamMember: async (projectId, contactId) => {
                 const projects = await projectService.getAll();
                 const project = projects.find(p => p.id === projectId);
                 if (!project) return;
-                project.team = project.team.filter(m => m.id !== memberId);
+                project.team = project.team.filter(id => id !== contactId);
                 await projectService.saveAll(projects);
             },
             addCommLog: async (projectId, message) => {
@@ -284,15 +380,74 @@
                 project.comms.unshift(newLog);
                 await projectService.saveAll(projects);
                 return newLog;
+            },
+            addTask: async (projectId, taskData) => {
+                const projects = await projectService.getAll();
+                const project = projects.find(p => p.id === projectId);
+                if (!project) return null;
+                const newTask = {
+                    id: `task_${crypto.randomUUID()}`,
+                    status: taskData.assignee.startsWith('Me') ? 'mytodo' : 'assignedtodo',
+                    ...taskData
+                };
+                project.tasks.push(newTask);
+                await projectService.saveAll(projects);
+                return newTask;
+            },
+            updateTask: async (projectId, taskId, updatedData) => {
+                const projects = await projectService.getAll();
+                const project = projects.find(p => p.id === projectId);
+                if (!project) return;
+                const taskIndex = project.tasks.findIndex(t => t.id === taskId);
+                if (taskIndex > -1) {
+                    project.tasks[taskIndex] = { ...project.tasks[taskIndex], ...updatedData };
+                    await projectService.saveAll(projects);
+                }
+            },
+            updateTaskStatus: async (projectId, taskId, newStatus) => {
+                const projects = await projectService.getAll();
+                const project = projects.find(p => p.id === projectId);
+                if (!project) return;
+                const task = project.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.status = newStatus;
+                    await projectService.saveAll(projects);
+                }
+            }
+        };
+
+        const contactService = {
+            getAll: async () => JSON.parse(localStorage.getItem('janus_contacts')) || [],
+            saveAll: async (contacts) => localStorage.setItem('janus_contacts', JSON.stringify(contacts)),
+            add: async (contactData) => {
+                const contacts = await contactService.getAll();
+                const newContact = { id: `con_${crypto.randomUUID()}`, ...contactData };
+                contacts.push(newContact);
+                await contactService.saveAll(contacts);
+                return newContact;
+            },
+            update: async (contactId, updatedData) => {
+                const contacts = await contactService.getAll();
+                const contactIndex = contacts.findIndex(c => c.id === contactId);
+                if (contactIndex > -1) {
+                    contacts[contactIndex] = { ...contacts[contactIndex], ...updatedData };
+                    await contactService.saveAll(contacts);
+                }
+            },
+            delete: async (contactId) => {
+                let contacts = await contactService.getAll();
+                contacts = contacts.filter(c => c.id !== contactId);
+                await contactService.saveAll(contacts);
             }
         };
 
         // --- GLOBAL STATE ---
         let allProjects = [];
+        let allContacts = [];
         let currentProjectId = null;
         let expandedProjects = new Set();
-        const tabContainer = document.querySelector('.tab-container');
         const teamListEl = document.getElementById('team-list');
+        let currentCalendarDate = new Date();
         
         // Modal Elements
         const modal = document.getElementById('generic-modal');
@@ -300,15 +455,36 @@
         const modalTitle = document.getElementById('modal-title');
         const modalMessage = document.getElementById('modal-message');
         const modalInputContainer = document.getElementById('modal-input-container');
-        const modalInputGroup1 = document.getElementById('modal-input-group-1');
-        const modalInput1 = document.getElementById('modal-input-1');
-        const modalInputLabel1 = document.getElementById('modal-input-label-1');
-        const modalInputGroup2 = document.getElementById('modal-input-group-2');
-        const modalInput2 = document.getElementById('modal-input-2');
-        const modalInputLabel2 = document.getElementById('modal-input-label-2');
         const modalCancelBtn = document.getElementById('modal-cancel-btn');
         const modalConfirmBtn = document.getElementById('modal-confirm-btn');
         let modalResolve = null;
+
+        // --- HELPER FUNCTIONS ---
+        function formatDateGerman(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}.${month}.${year}`;
+        }
+
+        function getIconForProjectName(name) {
+            const lowerName = name.toLowerCase();
+            const iconMap = {
+                'germany': '🇩🇪', 'deutschland': '🇩🇪', 'usa': '🇺🇸', 'america': '🇺🇸',
+                'france': '🇫🇷', 'spain': '🇪🇸', 'italy': '🇮🇹', 'uk': '🇬🇧', 'england': '🇬🇧',
+                'canada': '🇨🇦', 'australia': '🇦🇺', 'japan': '🇯🇵', 'china': '🇨🇳',
+                'india': '🇮🇳', 'brazil': '🇧🇷', 'africa': '🌍', 'europe': '🇪🇺', 'asia': '🌏',
+                'marketing': '📈', 'finance': '💰', 'development': '💻', 'dev': '💻', 'code': '💻',
+                'design': '🎨', 'sales': '🤝', 'hr': '👥', 'human resources': '👥',
+                'personal': '👤', 'home': '🏠', 'work': '💼'
+            };
+            for (const key in iconMap) {
+                if (lowerName.includes(key)) return iconMap[key];
+            }
+            return '📁';
+        }
 
         // --- MODAL FUNCTIONS ---
         function showModal(options) {
@@ -317,28 +493,49 @@
             modalMessage.textContent = options.message || '';
             modalMessage.classList.toggle('hidden', !options.message);
 
-            const hasInputs = options.inputs && options.inputs.length > 0;
-            modalInputContainer.classList.toggle('hidden', !hasInputs);
+            modalInputContainer.innerHTML = '';
+            if (options.inputs) {
+                options.inputs.forEach((input, index) => {
+                    const id = `modal-input-${index}`;
+                    const group = document.createElement('div');
+                    const label = document.createElement('label');
+                    label.htmlFor = id;
+                    label.textContent = input.label;
+                    group.appendChild(label);
 
-            if (hasInputs) {
-                const [input1, input2] = options.inputs;
-                modalInputGroup1.classList.toggle('hidden', !input1);
-                if (input1) {
-                    modalInputLabel1.textContent = input1.label || '';
-                    modalInput1.value = input1.value || '';
-                }
-                modalInputGroup2.classList.toggle('hidden', !input2);
-                if (input2) {
-                    modalInputLabel2.textContent = input2.label || '';
-                    modalInput2.value = input2.value || '';
-                }
+                    if (input.type === 'select') {
+                        const select = document.createElement('select');
+                        select.id = id;
+                        input.options.forEach(opt => {
+                            const option = document.createElement('option');
+                            option.value = opt.value;
+                            option.textContent = opt.text;
+                            if (opt.value === input.value) option.selected = true;
+                            select.appendChild(option);
+                        });
+                        group.appendChild(select);
+                    } else if (input.type === 'textarea') {
+                        const textarea = document.createElement('textarea');
+                        textarea.id = id;
+                        textarea.value = input.value || '';
+                        group.appendChild(textarea);
+                    } else {
+                        const inputEl = document.createElement('input');
+                        inputEl.type = input.type || 'text';
+                        inputEl.id = id;
+                        inputEl.value = input.value || '';
+                        inputEl.autocomplete = 'off';
+                        group.appendChild(inputEl);
+                    }
+                    modalInputContainer.appendChild(group);
+                });
             }
 
             modalConfirmBtn.textContent = options.confirmText || 'Confirm';
             modalConfirmBtn.className = options.danger ? 'confirm-danger' : '';
 
             modal.classList.remove('hidden');
-            if (hasInputs) modalInput1.focus();
+            if (options.inputs) modalInputContainer.querySelector('input, select, textarea')?.focus();
 
             return new Promise(resolve => {
                 modalResolve = resolve;
@@ -354,7 +551,7 @@
         modalForm.addEventListener('submit', (e) => {
             e.preventDefault();
             if (modalResolve) {
-                const inputs = [modalInput1.value.trim(), modalInput2.value.trim()];
+                const inputs = Array.from(modalInputContainer.querySelectorAll('input, select, textarea')).map(el => el.value.trim());
                 modalResolve({ confirmed: true, inputs });
                 hideModal();
             }
@@ -404,6 +601,7 @@
             projectItemDiv.innerHTML = `
                 <div class="project-name-wrapper" data-action="select">
                     <span class="toggle">${hasChildren ? '▶' : '•'}</span>
+                    <span class="project-icon">${project.icon || '📁'}</span>
                     <span>${project.name}</span>
                 </div>
                 <div class="project-actions">
@@ -454,8 +652,8 @@
             renderDocuments(projectId);
             renderTeam(projectId);
             renderComms(projectId);
+            renderTasks(projectId);
             
-            // Re-render tree to update active state
             renderProjectTree();
         }
 
@@ -486,14 +684,17 @@
                 teamListEl.innerHTML = '<li class="list-item">No team members assigned.</li>';
                 return;
             }
-            project.team.forEach(member => {
-                const li = document.createElement('li');
-                li.className = 'list-item';
-                li.innerHTML = `
-                    <span>${member.name}</span>
-                    <button class="remove-btn" data-member-id="${member.id}">&times;</button>
-                `;
-                teamListEl.appendChild(li);
+            project.team.forEach(contactId => {
+                const contact = allContacts.find(c => c.id === contactId);
+                if (contact) {
+                    const li = document.createElement('li');
+                    li.className = 'list-item';
+                    li.innerHTML = `
+                        <span>${contact.name}</span>
+                        <button class="remove-btn" data-contact-id="${contact.id}">&times;</button>
+                    `;
+                    teamListEl.appendChild(li);
+                }
             });
         }
 
@@ -514,6 +715,111 @@
                     <small>${date}</small>
                 `;
                 commListEl.appendChild(li);
+            });
+        }
+
+        function renderTasks(projectId) {
+            document.querySelectorAll('.kanban-tasks').forEach(col => col.innerHTML = '');
+            const project = allProjects.find(p => p.id === projectId);
+            if (!project || !project.tasks) return;
+
+            project.tasks.forEach(task => {
+                const taskCard = document.createElement('div');
+                taskCard.className = 'task-card';
+                taskCard.classList.add(`priority-${task.priority || 'low'}`);
+                taskCard.draggable = true;
+                taskCard.dataset.taskId = task.id;
+                taskCard.innerHTML = `
+                    <div class="task-name">${task.name}</div>
+                    <div class="task-details">
+                        <div>👤 ${task.assignee}</div>
+                        <div>🗓️ ${formatDateGerman(task.startDate)} → ${formatDateGerman(task.endDate)}</div>
+                    </div>
+                `;
+                
+                const column = document.querySelector(`.kanban-column[data-status="${task.status}"] .kanban-tasks`);
+                if (column) {
+                    column.appendChild(taskCard);
+                }
+            });
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            const display = document.getElementById('month-year-display');
+            grid.innerHTML = '';
+
+            const month = currentCalendarDate.getMonth();
+            const year = currentCalendarDate.getFullYear();
+
+            display.textContent = new Date(year, month).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'calendar-day-header';
+                dayHeader.textContent = day;
+                grid.appendChild(dayHeader);
+            });
+
+            for (let i = 0; i < (firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1); i++) {
+                grid.appendChild(document.createElement('div'));
+            }
+
+            const allTasks = allProjects.flatMap(p => p.tasks.map(t => ({...t, projectName: p.name})));
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayCell = document.createElement('div');
+                dayCell.className = 'calendar-day';
+                dayCell.innerHTML = `<div class="calendar-day-number">${day}</div>`;
+                
+                const currentDate = new Date(year, month, day);
+                allTasks.forEach(task => {
+                    const startDate = new Date(task.startDate);
+                    const endDate = new Date(task.endDate);
+                    if (currentDate >= startDate && currentDate <= endDate) {
+                        const taskEl = document.createElement('div');
+                        taskEl.className = 'calendar-task';
+                        taskEl.textContent = `${task.projectName}: ${task.name}`;
+                        dayCell.appendChild(taskEl);
+                    }
+                });
+                grid.appendChild(dayCell);
+            }
+        }
+        
+        async function renderContacts() {
+            allContacts = await contactService.getAll();
+            const contactListEl = document.getElementById('contact-list');
+            contactListEl.innerHTML = '';
+            if (allContacts.length === 0) {
+                contactListEl.innerHTML = '<li class="list-item">No contacts yet.</li>';
+                return;
+            }
+            allContacts.forEach(contact => {
+                const li = document.createElement('li');
+                li.className = 'contact-item';
+                li.dataset.contactId = contact.id;
+                li.innerHTML = `
+                    <div class="contact-info">
+                        <div class="contact-name">${contact.name}</div>
+                        <div class="contact-company">${contact.company}</div>
+                        <div>📧 ${contact.email || 'N/A'}</div>
+                        <div>📞 ${contact.phone || 'N/A'}</div>
+                        <div class="contact-channels">
+                            ${contact.whatsapp ? '<span>🟢 WhatsApp</span>' : ''}
+                            ${contact.wechat ? '<span>💬 WeChat</span>' : ''}
+                            ${contact.signal ? '<span>🔒 Signal</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="contact-actions">
+                        <button class="project-action-btn" data-action="edit-contact">✏️</button>
+                        <button class="project-action-btn" data-action="delete-contact">🗑️</button>
+                    </div>
+                `;
+                contactListEl.appendChild(li);
             });
         }
 
@@ -566,7 +872,7 @@
                         }).then(async ({ confirmed, inputs }) => {
                             if (confirmed && inputs[0]) {
                                 await projectService.renameProject(projectId, inputs[0]);
-                                renderProjectTree();
+                                initializeApp();
                             }
                         });
                         break;
@@ -589,12 +895,29 @@
             }
         });
         
-        tabContainer.addEventListener('click', (e) => {
+        document.getElementById('main-nav').addEventListener('click', (e) => {
+            const clickedNavItem = e.target.closest('.main-nav-item');
+            if (!clickedNavItem) return;
+
+            document.querySelectorAll('.main-nav-item').forEach(item => item.classList.remove('active'));
+            clickedNavItem.classList.add('active');
+
+            document.querySelectorAll('.main-panel').forEach(panel => panel.classList.remove('active'));
+            const panelId = clickedNavItem.dataset.panel;
+            document.getElementById(panelId).classList.add('active');
+
+            if (panelId === 'calendar-panel') renderCalendar();
+            if (panelId === 'contacts-panel') renderContacts();
+        });
+
+        document.getElementById('project-tabs').addEventListener('click', (e) => {
             const clickedTab = e.target.closest('.tab-button');
             if (!clickedTab) return;
-            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+
+            document.querySelectorAll('#project-tabs .tab-button').forEach(btn => btn.classList.remove('active'));
             clickedTab.classList.add('active');
+
+            document.querySelectorAll('.tab-content-container .tab-panel').forEach(panel => panel.classList.remove('active'));
             const tabId = clickedTab.dataset.tab;
             document.getElementById(tabId).classList.add('active');
         });
@@ -603,10 +926,7 @@
             if (!currentProjectId) return alert("Please select a project first.");
             showModal({
                 title: 'Add New Document',
-                inputs: [
-                    { label: 'Document Name (e.g., "Project Brief")' },
-                    { label: 'Document URL (e.g., "https://docs.google.com/...")' }
-                ],
+                inputs: [ { label: 'Document Name' }, { label: 'Document URL' } ],
                 confirmText: 'Add'
             }).then(async ({ confirmed, inputs }) => {
                 if (confirmed && inputs[0] && inputs[1]) {
@@ -619,9 +939,18 @@
 
         document.getElementById('add-member-btn').addEventListener('click', () => {
             if (!currentProjectId) return alert("Please select a project first.");
+            const project = allProjects.find(p => p.id === currentProjectId);
+            const memberOptions = allContacts
+                .filter(c => !project.team.includes(c.id)) // Filter out existing members
+                .map(c => ({ value: c.id, text: c.name }));
+
+            if (memberOptions.length === 0) {
+                return alert("All available contacts are already on this team.");
+            }
+
             showModal({
                 title: 'Add Team Member',
-                inputs: [{ label: 'Member Name' }],
+                inputs: [{ label: 'Select Contact', type: 'select', options: memberOptions }],
                 confirmText: 'Add'
             }).then(async ({ confirmed, inputs }) => {
                 if (confirmed && inputs[0]) {
@@ -635,15 +964,15 @@
         teamListEl.addEventListener('click', (e) => {
             const removeBtn = e.target.closest('.remove-btn');
             if (removeBtn) {
-                const memberId = removeBtn.dataset.memberId;
+                const contactId = removeBtn.dataset.contactId;
                 showModal({
                     title: 'Remove Team Member',
-                    message: 'Are you sure you want to remove this team member?',
+                    message: 'Are you sure you want to remove this member from the project?',
                     confirmText: 'Remove',
                     danger: true
                 }).then(async ({ confirmed }) => {
                     if (confirmed) {
-                        await projectService.removeTeamMember(currentProjectId, memberId);
+                        await projectService.removeTeamMember(currentProjectId, contactId);
                         allProjects = await projectService.getAll();
                         renderTeam(currentProjectId);
                     }
@@ -666,12 +995,221 @@
             });
         });
 
+        document.getElementById('add-task-btn').addEventListener('click', () => {
+            if (!currentProjectId) return alert("Please select a project first.");
+            const project = allProjects.find(p => p.id === currentProjectId);
+            const teamContacts = allContacts.filter(c => project.team.includes(c.id));
+            
+            const assigneeOptions = [{ value: 'Me (Email)', text: 'Me (Email)' }];
+            teamContacts.forEach(contact => {
+                if(contact.whatsapp) assigneeOptions.push({ value: `${contact.name} (WhatsApp)`, text: `${contact.name} (WhatsApp)` });
+                if(contact.wechat) assigneeOptions.push({ value: `${contact.name} (WeChat)`, text: `${contact.name} (WeChat)` });
+                if(contact.signal) assigneeOptions.push({ value: `${contact.name} (Signal)`, text: `${contact.name} (Signal)` });
+                if(contact.email) assigneeOptions.push({ value: `${contact.name} (Email)`, text: `${contact.name} (Email)` });
+            });
+
+            const priorityOptions = [
+                { value: 'low', text: 'Low' }, { value: 'medium', text: 'Medium' }, { value: 'high', text: 'High' }
+            ];
+
+            showModal({
+                title: 'Add New Task',
+                inputs: [
+                    { label: 'Task Name' },
+                    { label: 'Assign To', type: 'select', options: assigneeOptions },
+                    { label: 'Priority', type: 'select', options: priorityOptions },
+                    { label: 'Start Date', type: 'date' },
+                    { label: 'End Date', type: 'date' }
+                ],
+                confirmText: 'Add Task'
+            }).then(async ({ confirmed, inputs }) => {
+                if (confirmed && inputs[0]) {
+                    const [name, assignee, priority, startDate, endDate] = inputs;
+                    await projectService.addTask(currentProjectId, { name, assignee, priority, startDate, endDate, description: '' });
+                    allProjects = await projectService.getAll();
+                    renderTasks(currentProjectId);
+                }
+            });
+        });
+
+        const kanbanBoard = document.querySelector('.kanban-board');
+        let draggedTask = null;
+
+        kanbanBoard.addEventListener('dragstart', (e) => {
+            if (e.target.classList.contains('task-card')) {
+                draggedTask = e.target;
+                setTimeout(() => e.target.classList.add('dragging'), 0);
+            }
+        });
+
+        kanbanBoard.addEventListener('dragend', (e) => {
+            if (draggedTask) {
+                draggedTask.classList.remove('dragging');
+                draggedTask = null;
+            }
+        });
+        
+        kanbanBoard.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const dropZone = e.target.closest('.kanban-tasks');
+            if (dropZone) dropZone.classList.add('drag-over');
+        });
+
+        kanbanBoard.addEventListener('dragleave', (e) => {
+            const dropZone = e.target.closest('.kanban-tasks');
+            if (dropZone) dropZone.classList.remove('drag-over');
+        });
+
+        kanbanBoard.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            const dropZone = e.target.closest('.kanban-tasks');
+            if (dropZone) {
+                dropZone.classList.remove('drag-over');
+                const column = dropZone.closest('.kanban-column');
+                if (column && draggedTask) {
+                    const newStatus = column.dataset.status;
+                    const taskId = draggedTask.dataset.taskId;
+                    
+                    await projectService.updateTaskStatus(currentProjectId, taskId, newStatus);
+                    allProjects = await projectService.getAll();
+                    renderTasks(currentProjectId);
+                }
+            }
+        });
+
+        kanbanBoard.addEventListener('click', (e) => {
+            const taskCard = e.target.closest('.task-card');
+            if (!taskCard) return;
+            
+            const taskId = taskCard.dataset.taskId;
+            const project = allProjects.find(p => p.id === currentProjectId);
+            const task = project.tasks.find(t => t.id === taskId);
+            
+             const teamContacts = allContacts.filter(c => project.team.includes(c.id));
+            const assigneeOptions = [{ value: 'Me (Email)', text: 'Me (Email)' }];
+            teamContacts.forEach(contact => {
+                if(contact.whatsapp) assigneeOptions.push({ value: `${contact.name} (WhatsApp)`, text: `${contact.name} (WhatsApp)` });
+                if(contact.wechat) assigneeOptions.push({ value: `${contact.name} (WeChat)`, text: `${contact.name} (WeChat)` });
+                if(contact.signal) assigneeOptions.push({ value: `${contact.name} (Signal)`, text: `${contact.name} (Signal)` });
+                if(contact.email) assigneeOptions.push({ value: `${contact.name} (Email)`, text: `${contact.name} (Email)` });
+            });
+
+            const priorityOptions = [
+                { value: 'low', text: 'Low' }, { value: 'medium', text: 'Medium' }, { value: 'high', text: 'High' }
+            ];
+
+             showModal({
+                title: 'Edit Task',
+                inputs: [
+                    { label: 'Task Name', value: task.name },
+                    { label: 'Assign To', type: 'select', options: assigneeOptions, value: task.assignee },
+                    { label: 'Priority', type: 'select', options: priorityOptions, value: task.priority },
+                    { label: 'Start Date', type: 'date', value: task.startDate },
+                    { label: 'End Date', type: 'date', value: task.endDate },
+                    { label: 'Description', type: 'textarea', value: task.description }
+                ],
+                confirmText: 'Save Changes'
+            }).then(async ({ confirmed, inputs }) => {
+                if (confirmed) {
+                    const [name, assignee, priority, startDate, endDate, description] = inputs;
+                    await projectService.updateTask(currentProjectId, taskId, { name, assignee, priority, startDate, endDate, description });
+                    allProjects = await projectService.getAll();
+                    renderTasks(currentProjectId);
+                }
+            });
+        });
+
+        document.getElementById('add-contact-btn').addEventListener('click', () => {
+            showModal({
+                title: 'Add New Contact',
+                inputs: [
+                    { label: 'Name' }, { label: 'Email' }, { label: 'Phone' }, { label: 'Company' },
+                    { label: 'WhatsApp' }, { label: 'WeChat' }, { label: 'Signal' }
+                ],
+                confirmText: 'Save Contact'
+            }).then(async ({ confirmed, inputs }) => {
+                if (confirmed && inputs[0]) {
+                    const [name, email, phone, company, whatsapp, wechat, signal] = inputs;
+                    await contactService.add({ name, email, phone, company, whatsapp, wechat, signal });
+                    renderContacts();
+                }
+            });
+        });
+
+        document.getElementById('contact-list').addEventListener('click', (e) => {
+            const actionTarget = e.target.closest('[data-action]');
+            if (!actionTarget) return;
+
+            const action = actionTarget.dataset.action;
+            const contactItem = actionTarget.closest('.contact-item');
+            const contactId = contactItem.dataset.contactId;
+            const contact = allContacts.find(c => c.id === contactId);
+
+            if (action === 'edit-contact') {
+                showModal({
+                    title: 'Edit Contact',
+                    inputs: [
+                        { label: 'Name', value: contact.name },
+                        { label: 'Email', value: contact.email },
+                        { label: 'Phone', value: contact.phone },
+                        { label: 'Company', value: contact.company },
+                        { label: 'WhatsApp', value: contact.whatsapp },
+                        { label: 'WeChat', value: contact.wechat },
+                        { label: 'Signal', value: contact.signal }
+                    ],
+                    confirmText: 'Save Changes'
+                }).then(async ({ confirmed, inputs }) => {
+                    if (confirmed) {
+                        const [name, email, phone, company, whatsapp, wechat, signal] = inputs;
+                        await contactService.update(contactId, { name, email, phone, company, whatsapp, wechat, signal });
+                        renderContacts();
+                    }
+                });
+            } else if (action === 'delete-contact') {
+                showModal({
+                    title: 'Delete Contact',
+                    message: `Are you sure you want to delete ${contact.name}?`,
+                    confirmText: 'Delete',
+                    danger: true
+                }).then(async ({ confirmed }) => {
+                    if (confirmed) {
+                        await contactService.delete(contactId);
+                        renderContacts();
+                    }
+                });
+            }
+        });
+
+        // Calendar Navigation
+        document.getElementById('prev-month-btn').addEventListener('click', () => {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+            renderCalendar();
+        });
+        document.getElementById('next-month-btn').addEventListener('click', () => {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+            renderCalendar();
+        });
+
         // --- INITIALIZATION ---
         async function initializeApp() {
-            const existingProjects = await projectService.getAll();
+            let existingProjects = await projectService.getAll();
+            let needsSave = false;
+            existingProjects.forEach(p => {
+                if (!p.icon) {
+                    p.icon = getIconForProjectName(p.name);
+                    needsSave = true;
+                }
+            });
+            if (needsSave) {
+                await projectService.saveAll(existingProjects);
+            }
+
             if (existingProjects.length === 0) {
                  await projectService.add({ name: 'Main Project Alpha' });
+                 existingProjects = await projectService.getAll();
             }
+
+            allProjects = existingProjects;
             await renderProjectTree();
             
             if (!currentProjectId && allProjects.length > 0) {
@@ -680,9 +1218,10 @@
             } else if (allProjects.length === 0) {
                 selectProject(null);
             } else {
-                // Reselect the current project to refresh the view
                 selectProject(currentProjectId);
             }
+            renderCalendar();
+            renderContacts();
         }
 
         initializeApp();
