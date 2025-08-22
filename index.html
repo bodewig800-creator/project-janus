@@ -13,8 +13,25 @@
         .project-item:hover { background-color: #f0f0f0; }
         .project-item.active { background-color: #e0e0ff; font-weight: bold; }
         .toggle { margin-right: 8px; width: 16px; text-align: center; font-size: 10px; user-select: none; }
-        #new-project-btn { margin-bottom: 10px; }
         
+        .sidebar-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .sidebar-actions button {
+            flex-grow: 1;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+        #delete-project-btn {
+            background-color: #d9534f;
+            color: white;
+            border-color: #d9534f;
+        }
+
         /* Modal Styles */
         .modal-backdrop {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -104,7 +121,10 @@
 
     <div id="sidebar">
         <h2>Projects</h2>
-        <button id="new-project-btn">New Project</button>
+        <div class="sidebar-actions">
+            <button id="new-project-btn">New Project</button>
+            <button id="delete-project-btn" class="hidden">Delete</button>
+        </div>
         <p><small>Select a project to create a sub-project under it.</small></p>
         <ul id="project-tree"></ul>
     </div>
@@ -114,15 +134,15 @@
         <p id="current-project-name">None</p>
     
         <div class="tab-container">
-            <button class="tab-button active" data-tab="kanban-panel">Kanban</button>
+            <button class="tab-button active" data-tab="tasks-panel">Tasks</button>
             <button class="tab-button" data-tab="documents-panel">Documents</button>
             <button class="tab-button" data-tab="communication-panel">Communication</button>
             <button class="tab-button" data-tab="team-panel">Team</button>
         </div>
     
         <div class="tab-content-container">
-            <div class="tab-panel active" id="kanban-panel">
-                <h4>Kanban board goes here.</h4>
+            <div class="tab-panel active" id="tasks-panel">
+                <h4>Task management board goes here.</h4>
             </div>
     
             <div class="tab-panel" id="documents-panel">
@@ -191,6 +211,23 @@
                 await projectService.saveAll(projects);
                 return newProject;
             },
+            deleteProject: async (projectId) => {
+                let projects = await projectService.getAll();
+                const projectsToDelete = new Set([projectId]);
+                let changed = true;
+                while (changed) {
+                    changed = false;
+                    const children = projects.filter(p => projectsToDelete.has(p.parentId));
+                    children.forEach(child => {
+                        if (!projectsToDelete.has(child.id)) {
+                            projectsToDelete.add(child.id);
+                            changed = true;
+                        }
+                    });
+                }
+                const remainingProjects = projects.filter(p => !projectsToDelete.has(p.id));
+                await projectService.saveAll(remainingProjects);
+            },
             addDocument: async (projectId, docData) => {
                 const projects = await projectService.getAll();
                 const project = projects.find(p => p.id === projectId);
@@ -237,6 +274,7 @@
         let expandedProjects = new Set();
         const tabContainer = document.querySelector('.tab-container');
         const teamListEl = document.getElementById('team-list');
+        const deleteProjectBtn = document.getElementById('delete-project-btn');
         
         // Modal Elements
         const modal = document.getElementById('generic-modal');
@@ -266,21 +304,15 @@
 
             if (hasInputs) {
                 const [input1, input2] = options.inputs;
-
+                modalInputGroup1.classList.toggle('hidden', !input1);
                 if (input1) {
                     modalInputLabel1.textContent = input1.label || '';
                     modalInput1.value = input1.value || '';
-                    modalInputGroup1.classList.remove('hidden');
-                } else {
-                    modalInputGroup1.classList.add('hidden');
                 }
-
+                modalInputGroup2.classList.toggle('hidden', !input2);
                 if (input2) {
                     modalInputLabel2.textContent = input2.label || '';
                     modalInput2.value = input2.value || '';
-                    modalInputGroup2.classList.remove('hidden');
-                } else {
-                    modalInputGroup2.classList.add('hidden');
                 }
             }
 
@@ -391,6 +423,7 @@
             currentProjectId = projectId;
             const project = allProjects.find(p => p.id === projectId);
             document.getElementById('current-project-name').textContent = project ? project.name : 'None';
+            deleteProjectBtn.classList.toggle('hidden', !project);
             renderDocuments(projectId);
             renderTeam(projectId);
             renderComms(projectId);
@@ -461,6 +494,8 @@
         document.getElementById('sidebar').addEventListener('click', (e) => {
             const projectItem = e.target.closest('.project-item');
             const newProjectBtn = e.target.closest('#new-project-btn');
+            const deleteBtn = e.target.closest('#delete-project-btn');
+
             if (projectItem) {
                 selectProject(projectItem.dataset.id);
                 const sublist = projectItem.nextElementSibling;
@@ -483,6 +518,21 @@
                         if (currentProjectId) expandedProjects.add(currentProjectId);
                         addProjectNodeToDOM(newProject);
                         selectProject(newProject.id);
+                    }
+                });
+            } else if (deleteBtn) {
+                 if (!currentProjectId) return;
+                const project = allProjects.find(p => p.id === currentProjectId);
+                showModal({
+                    title: 'Delete Project',
+                    message: `Are you sure you want to delete "${project.name}" and all its sub-projects? This action cannot be undone.`,
+                    confirmText: 'Delete',
+                    danger: true
+                }).then(async ({ confirmed }) => {
+                    if (confirmed) {
+                        await projectService.deleteProject(currentProjectId);
+                        currentProjectId = null;
+                        initializeApp();
                     }
                 });
             }
@@ -572,8 +622,12 @@
                  await projectService.add({ name: 'Main Project Alpha' });
             }
             await renderProjectTree();
+            
             if (allProjects.length > 0) {
-                 selectProject(allProjects[0].id);
+                 const firstProjectId = allProjects.find(p => !p.parentId)?.id || allProjects[0].id;
+                 selectProject(firstProjectId);
+            } else {
+                selectProject(null);
             }
         }
 
