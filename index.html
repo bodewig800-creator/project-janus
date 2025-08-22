@@ -73,6 +73,14 @@
             justify-content: space-between;
             align-items: center;
         }
+        #document-list a {
+            text-decoration: none;
+            color: #007bff;
+        }
+        #document-list a:hover {
+            text-decoration: underline;
+        }
+
     </style>
 </head>
 <body>
@@ -140,9 +148,23 @@
             getAll: async () => JSON.parse(localStorage.getItem('janus_projects')) || [],
             add: async (data) => {
                 const projects = await projectService.getAll();
-                const newProject = { id: `proj_${crypto.randomUUID()}`, ...data };
+                const newProject = { 
+                    id: `proj_${crypto.randomUUID()}`, 
+                    documents: [], // Projects now start with an empty documents array
+                    ...data 
+                };
                 localStorage.setItem('janus_projects', JSON.stringify([...projects, newProject]));
                 return newProject;
+            },
+            addDocument: async (projectId, docData) => {
+                const projects = await projectService.getAll();
+                const projectIndex = projects.findIndex(p => p.id === projectId);
+                if (projectIndex === -1) return null;
+
+                const newDocument = { id: `doc_${crypto.randomUUID()}`, ...docData };
+                projects[projectIndex].documents.push(newDocument);
+                localStorage.setItem('janus_projects', JSON.stringify(projects));
+                return newDocument;
             }
         };
 
@@ -155,6 +177,7 @@
         const newProjectNameInput = document.getElementById('new-project-name');
         const cancelBtn = document.getElementById('cancel-btn');
         const tabContainer = document.querySelector('.tab-container');
+        const addDocumentBtn = document.getElementById('add-document-btn');
 
         // --- CORE FUNCTIONS ---
         async function renderProjectTree() {
@@ -224,8 +247,28 @@
             currentProjectId = projectId;
             const project = allProjects.find(p => p.id === projectId);
             document.getElementById('current-project-name').textContent = project ? project.name : 'None';
+            renderDocuments(projectId); // Update documents when project changes
             document.querySelectorAll('.project-item').forEach(item => {
                 item.classList.toggle('active', item.dataset.id === projectId);
+            });
+        }
+
+        function renderDocuments(projectId) {
+            const documentListEl = document.getElementById('document-list');
+            documentListEl.innerHTML = '';
+            const project = allProjects.find(p => p.id === projectId);
+            if (!project || !project.documents || project.documents.length === 0) {
+                documentListEl.innerHTML = '<li>No documents yet.</li>';
+                return;
+            }
+            project.documents.forEach(doc => {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = doc.url;
+                a.textContent = doc.name;
+                a.target = '_blank'; // Open in a new tab
+                li.appendChild(a);
+                documentListEl.appendChild(li);
             });
         }
 
@@ -257,15 +300,26 @@
         tabContainer.addEventListener('click', (e) => {
             const clickedTab = e.target.closest('.tab-button');
             if (!clickedTab) return;
-
-            // Deactivate all tabs and panels
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
-
-            // Activate the clicked tab and its corresponding panel
             clickedTab.classList.add('active');
             const tabId = clickedTab.dataset.tab;
             document.getElementById(tabId).classList.add('active');
+        });
+
+        addDocumentBtn.addEventListener('click', async () => {
+            if (!currentProjectId) {
+                alert("Please select a project first.");
+                return;
+            }
+            const name = prompt("Enter document name (e.g., 'Project Brief'):");
+            if (!name) return;
+            const url = prompt("Enter document URL (e.g., 'https://docs.google.com/...'):");
+            if (!url) return;
+
+            await projectService.addDocument(currentProjectId, { name, url });
+            allProjects = await projectService.getAll();
+            renderDocuments(currentProjectId);
         });
 
         function hideModal() {
