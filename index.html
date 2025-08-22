@@ -157,9 +157,9 @@
             margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         
-        /* Contacts Styles */
-        #contact-list { list-style: none; padding: 0; }
-        .contact-item {
+        /* Contacts & Invoices Styles */
+        #contact-list, #invoice-list { list-style: none; padding: 0; }
+        .contact-item, .invoice-item {
             background-color: #fff;
             padding: 15px;
             border-radius: 5px;
@@ -169,12 +169,22 @@
             justify-content: space-between;
             align-items: center;
         }
-        .contact-info div { margin-bottom: 5px; }
-        .contact-info .contact-name { font-weight: bold; }
-        .contact-info .contact-company { color: #555; font-style: italic; }
+        .contact-info div, .invoice-info div { margin-bottom: 5px; }
+        .contact-name, .invoice-client { font-weight: bold; }
+        .contact-company, .invoice-details { color: #555; font-style: italic; }
         .contact-channels { font-size: 12px; color: #777; }
         .contact-channels span { margin-right: 5px; }
-        .contact-actions { display: flex; gap: 10px; }
+        .item-actions { display: flex; gap: 10px; align-items: center; }
+        .status-badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        .status-draft { background-color: #777; }
+        .status-sent { background-color: #f0ad4e; }
+        .status-paid { background-color: #5cb85c; }
     </style>
 </head>
 <body>
@@ -277,9 +287,9 @@
         <div class="main-panel" id="invoices-panel">
             <div class="panel-header">
                 <h2>Invoices</h2>
-                <button>Create Invoice</button>
+                <button id="create-invoice-btn">Create Invoice</button>
             </div>
-            <p>Invoice management system will be built here.</p>
+            <ul id="invoice-list"></ul>
         </div>
     </div>
 
@@ -441,9 +451,35 @@
             }
         };
 
+        const invoiceService = {
+            getAll: async () => JSON.parse(localStorage.getItem('janus_invoices')) || [],
+            saveAll: async (invoices) => localStorage.setItem('janus_invoices', JSON.stringify(invoices)),
+            add: async (invoiceData) => {
+                const invoices = await invoiceService.getAll();
+                const newInvoice = { id: `inv_${crypto.randomUUID()}`, ...invoiceData };
+                invoices.push(newInvoice);
+                await invoiceService.saveAll(invoices);
+                return newInvoice;
+            },
+            update: async (invoiceId, updatedData) => {
+                const invoices = await invoiceService.getAll();
+                const invoiceIndex = invoices.findIndex(i => i.id === invoiceId);
+                if (invoiceIndex > -1) {
+                    invoices[invoiceIndex] = { ...invoices[invoiceIndex], ...updatedData };
+                    await invoiceService.saveAll(invoices);
+                }
+            },
+            delete: async (invoiceId) => {
+                let invoices = await invoiceService.getAll();
+                invoices = invoices.filter(i => i.id !== invoiceId);
+                await invoiceService.saveAll(invoices);
+            }
+        };
+
         // --- GLOBAL STATE ---
         let allProjects = [];
         let allContacts = [];
+        let allInvoices = [];
         let currentProjectId = null;
         let expandedProjects = new Set();
         const teamListEl = document.getElementById('team-list');
@@ -814,12 +850,42 @@
                             ${contact.signal ? '<span>🔒 Signal</span>' : ''}
                         </div>
                     </div>
-                    <div class="contact-actions">
+                    <div class="item-actions">
                         <button class="project-action-btn" data-action="edit-contact">✏️</button>
                         <button class="project-action-btn" data-action="delete-contact">🗑️</button>
                     </div>
                 `;
                 contactListEl.appendChild(li);
+            });
+        }
+
+        async function renderInvoices() {
+            allInvoices = await invoiceService.getAll();
+            const invoiceListEl = document.getElementById('invoice-list');
+            invoiceListEl.innerHTML = '';
+            if (allInvoices.length === 0) {
+                invoiceListEl.innerHTML = '<li class="list-item">No invoices yet.</li>';
+                return;
+            }
+            allInvoices.forEach(invoice => {
+                const client = allContacts.find(c => c.id === invoice.contactId);
+                const li = document.createElement('li');
+                li.className = 'invoice-item';
+                li.dataset.invoiceId = invoice.id;
+                li.innerHTML = `
+                    <div class="invoice-info">
+                        <div class="invoice-client">${client ? client.name : 'Unknown Client'}</div>
+                        <div class="invoice-details">
+                            Amount: €${invoice.amount} | Due: ${formatDateGerman(invoice.dueDate)}
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                         <span class="status-badge status-${invoice.status.toLowerCase()}">${invoice.status}</span>
+                        <button class="project-action-btn" data-action="edit-invoice">✏️</button>
+                        <button class="project-action-btn" data-action="delete-invoice">🗑️</button>
+                    </div>
+                `;
+                invoiceListEl.appendChild(li);
             });
         }
 
@@ -908,6 +974,7 @@
 
             if (panelId === 'calendar-panel') renderCalendar();
             if (panelId === 'contacts-panel') renderContacts();
+            if (panelId === 'invoices-panel') renderInvoices();
         });
 
         document.getElementById('project-tabs').addEventListener('click', (e) => {
@@ -941,7 +1008,7 @@
             if (!currentProjectId) return alert("Please select a project first.");
             const project = allProjects.find(p => p.id === currentProjectId);
             const memberOptions = allContacts
-                .filter(c => !project.team.includes(c.id)) // Filter out existing members
+                .filter(c => !project.team.includes(c.id))
                 .map(c => ({ value: c.id, text: c.name }));
 
             if (memberOptions.length === 0) {
@@ -1179,6 +1246,79 @@
                 });
             }
         });
+        
+        document.getElementById('create-invoice-btn').addEventListener('click', () => {
+            if (allContacts.length === 0) {
+                return alert("Please add a contact before creating an invoice.");
+            }
+            const contactOptions = allContacts.map(c => ({ value: c.id, text: c.name }));
+            const statusOptions = [
+                { value: 'Draft', text: 'Draft' },
+                { value: 'Sent', text: 'Sent' },
+                { value: 'Paid', text: 'Paid' }
+            ];
+            showModal({
+                title: 'Create New Invoice',
+                inputs: [
+                    { label: 'Client', type: 'select', options: contactOptions },
+                    { label: 'Amount (€)', type: 'number' },
+                    { label: 'Due Date', type: 'date' },
+                    { label: 'Status', type: 'select', options: statusOptions }
+                ],
+                confirmText: 'Create Invoice'
+            }).then(async ({ confirmed, inputs }) => {
+                if (confirmed && inputs[0]) {
+                    const [contactId, amount, dueDate, status] = inputs;
+                    await invoiceService.add({ contactId, amount, dueDate, status });
+                    renderInvoices();
+                }
+            });
+        });
+
+        document.getElementById('invoice-list').addEventListener('click', (e) => {
+            const actionTarget = e.target.closest('[data-action]');
+            if (!actionTarget) return;
+
+            const action = actionTarget.dataset.action;
+            const invoiceItem = actionTarget.closest('.invoice-item');
+            const invoiceId = invoiceItem.dataset.invoiceId;
+            const invoice = allInvoices.find(i => i.id === invoiceId);
+
+            if (action === 'edit-invoice') {
+                 const contactOptions = allContacts.map(c => ({ value: c.id, text: c.name }));
+                const statusOptions = [
+                    { value: 'Draft', text: 'Draft' }, { value: 'Sent', text: 'Sent' }, { value: 'Paid', text: 'Paid' }
+                ];
+                showModal({
+                    title: 'Edit Invoice',
+                    inputs: [
+                        { label: 'Client', type: 'select', options: contactOptions, value: invoice.contactId },
+                        { label: 'Amount (€)', type: 'number', value: invoice.amount },
+                        { label: 'Due Date', type: 'date', value: invoice.dueDate },
+                        { label: 'Status', type: 'select', options: statusOptions, value: invoice.status }
+                    ],
+                    confirmText: 'Save Changes'
+                }).then(async ({ confirmed, inputs }) => {
+                    if (confirmed) {
+                        const [contactId, amount, dueDate, status] = inputs;
+                        await invoiceService.update(invoiceId, { contactId, amount, dueDate, status });
+                        renderInvoices();
+                    }
+                });
+            } else if (action === 'delete-invoice') {
+                showModal({
+                    title: 'Delete Invoice',
+                    message: 'Are you sure you want to delete this invoice?',
+                    confirmText: 'Delete',
+                    danger: true
+                }).then(async ({ confirmed }) => {
+                    if (confirmed) {
+                        await invoiceService.delete(invoiceId);
+                        renderInvoices();
+                    }
+                });
+            }
+        });
 
         // Calendar Navigation
         document.getElementById('prev-month-btn').addEventListener('click', () => {
@@ -1222,6 +1362,7 @@
             }
             renderCalendar();
             renderContacts();
+            renderInvoices();
         }
 
         initializeApp();
