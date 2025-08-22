@@ -6,7 +6,7 @@
     <title>Project Janus</title>
     <style>
         body { font-family: sans-serif; display: flex; padding: 20px; background-color: #f9f9f9; margin: 0; }
-        #sidebar { width: 300px; border: 1px solid #ccc; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #sidebar { width: 300px; border: 1px solid #ccc; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; }
         #project-tree { list-style: none; padding: 0; }
         #project-tree ul { list-style: none; padding-left: 20px; }
         .project-item { padding: 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; }
@@ -26,7 +26,7 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 400px;
         }
         .modal-content h3 { margin-top: 0; }
-        .modal-content input {
+        .modal-content input, .modal-content textarea {
             width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 15px;
             box-sizing: border-box;
         }
@@ -35,7 +35,10 @@
             padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;
         }
         .modal-actions button[type="submit"] {
-            background-color: #e0e0ff; border-color: #c0c0ff; font-weight: bold;
+            background-color: #4a90e2; border-color: #4a90e2; color: white;
+        }
+        .modal-actions .confirm-danger {
+             background-color: #d9534f; border-color: #d9534f; color: white;
         }
         .hidden { display: none; }
 
@@ -52,7 +55,7 @@
             cursor: pointer;
             font-size: 16px;
             border-bottom: 2px solid transparent;
-            margin-bottom: -2px; /* Aligns with the container's bottom border */
+            margin-bottom: -2px;
         }
         .tab-button:hover {
             background-color: #f0f0f0;
@@ -62,11 +65,11 @@
             font-weight: bold;
         }
         .tab-panel {
-            display: none; /* Hide all panels by default */
+            display: none;
             padding-top: 20px;
         }
         .tab-panel.active {
-            display: block; /* Show only the active panel */
+            display: block;
         }
         .panel-header {
             display: flex;
@@ -80,7 +83,21 @@
         #document-list a:hover {
             text-decoration: underline;
         }
-
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .remove-btn {
+            background: none; border: none; color: red; cursor: pointer; font-size: 16px;
+        }
+        .comm-log-item small {
+            color: #666;
+            margin-left: 15px;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
@@ -113,30 +130,42 @@
                     <h4>Project Documents</h4>
                     <button id="add-document-btn">Add Document</button>
                 </div>
-                <ul id="document-list">
-                    <li>No documents yet.</li>
-                </ul>
+                <ul id="document-list"></ul>
             </div>
     
             <div class="tab-panel" id="communication-panel">
-                <h4>Communication log goes here.</h4>
+                <div class="panel-header">
+                    <h4>Communication Log</h4>
+                    <button id="add-comm-btn">Add Log Entry</button>
+                </div>
+                <ul id="comm-list"></ul>
             </div>
     
             <div class="tab-panel" id="team-panel">
-                <h4>Team members go here.</h4>
+                <div class="panel-header">
+                    <h4>Team Members</h4>
+                    <button id="add-member-btn">Add Member</button>
+                </div>
+                <ul id="team-list"></ul>
             </div>
         </div>
     </div>
 
-    <div id="new-project-modal" class="modal-backdrop hidden">
+    <!-- Generic Reusable Modal -->
+    <div id="generic-modal" class="modal-backdrop hidden">
         <div class="modal-content">
-            <h3>Create New Project</h3>
-            <form id="new-project-form">
-                <label for="new-project-name">Project Name</label>
-                <input type="text" id="new-project-name" name="projectName" required autocomplete="off">
+            <h3 id="modal-title">Title</h3>
+            <p id="modal-message" class="hidden"></p>
+            <form id="modal-form">
+                <div id="modal-input-container" class="hidden">
+                    <label id="modal-input-label-1" for="modal-input-1">Label 1</label>
+                    <input type="text" id="modal-input-1" autocomplete="off">
+                    <label id="modal-input-label-2" for="modal-input-2">Label 2</label>
+                    <input type="text" id="modal-input-2" autocomplete="off">
+                </div>
                 <div class="modal-actions">
-                    <button type="button" id="cancel-btn">Cancel</button>
-                    <button type="submit">Create Project</button>
+                    <button type="button" id="modal-cancel-btn">Cancel</button>
+                    <button type="submit" id="modal-confirm-btn">Confirm</button>
                 </div>
             </form>
         </div>
@@ -146,25 +175,55 @@
         // --- DATA STORE ---
         const projectService = {
             getAll: async () => JSON.parse(localStorage.getItem('janus_projects')) || [],
+            saveAll: async (projects) => localStorage.setItem('janus_projects', JSON.stringify(projects)),
             add: async (data) => {
                 const projects = await projectService.getAll();
                 const newProject = { 
                     id: `proj_${crypto.randomUUID()}`, 
-                    documents: [], // Projects now start with an empty documents array
+                    documents: [], team: [], comms: [],
                     ...data 
                 };
-                localStorage.setItem('janus_projects', JSON.stringify([...projects, newProject]));
+                projects.push(newProject);
+                await projectService.saveAll(projects);
                 return newProject;
             },
             addDocument: async (projectId, docData) => {
                 const projects = await projectService.getAll();
-                const projectIndex = projects.findIndex(p => p.id === projectId);
-                if (projectIndex === -1) return null;
-
+                const project = projects.find(p => p.id === projectId);
+                if (!project) return null;
                 const newDocument = { id: `doc_${crypto.randomUUID()}`, ...docData };
-                projects[projectIndex].documents.push(newDocument);
-                localStorage.setItem('janus_projects', JSON.stringify(projects));
+                project.documents.push(newDocument);
+                await projectService.saveAll(projects);
                 return newDocument;
+            },
+            addTeamMember: async (projectId, memberName) => {
+                const projects = await projectService.getAll();
+                const project = projects.find(p => p.id === projectId);
+                if (!project) return null;
+                const newMember = { id: `mem_${crypto.randomUUID()}`, name: memberName };
+                project.team.push(newMember);
+                await projectService.saveAll(projects);
+                return newMember;
+            },
+            removeTeamMember: async (projectId, memberId) => {
+                const projects = await projectService.getAll();
+                const project = projects.find(p => p.id === projectId);
+                if (!project) return;
+                project.team = project.team.filter(m => m.id !== memberId);
+                await projectService.saveAll(projects);
+            },
+            addCommLog: async (projectId, message) => {
+                const projects = await projectService.getAll();
+                const project = projects.find(p => p.id === projectId);
+                if (!project) return null;
+                const newLog = { 
+                    id: `comm_${crypto.randomUUID()}`, 
+                    message,
+                    timestamp: new Date().toISOString()
+                };
+                project.comms.unshift(newLog);
+                await projectService.saveAll(projects);
+                return newLog;
             }
         };
 
@@ -172,14 +231,85 @@
         let allProjects = [];
         let currentProjectId = null;
         let expandedProjects = new Set();
-        const newProjectModal = document.getElementById('new-project-modal');
-        const newProjectForm = document.getElementById('new-project-form');
-        const newProjectNameInput = document.getElementById('new-project-name');
-        const cancelBtn = document.getElementById('cancel-btn');
         const tabContainer = document.querySelector('.tab-container');
-        const addDocumentBtn = document.getElementById('add-document-btn');
+        const teamListEl = document.getElementById('team-list');
+        
+        // Modal Elements
+        const modal = document.getElementById('generic-modal');
+        const modalForm = document.getElementById('modal-form');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalInputContainer = document.getElementById('modal-input-container');
+        const modalInput1 = document.getElementById('modal-input-1');
+        const modalInputLabel1 = document.getElementById('modal-input-label-1');
+        const modalInput2 = document.getElementById('modal-input-2');
+        const modalInputLabel2 = document.getElementById('modal-input-label-2');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+        const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+        let modalResolve = null;
 
-        // --- CORE FUNCTIONS ---
+        // --- MODAL FUNCTIONS ---
+        function showModal(options) {
+            modalTitle.textContent = options.title;
+            
+            modalMessage.textContent = options.message || '';
+            modalMessage.classList.toggle('hidden', !options.message);
+
+            const hasInputs = options.inputs && options.inputs.length > 0;
+            modalInputContainer.classList.toggle('hidden', !hasInputs);
+
+            if (hasInputs) {
+                const [input1, input2] = options.inputs;
+                modalInputLabel1.textContent = input1?.label || '';
+                modalInput1.value = input1?.value || '';
+                modalInput1.parentElement.classList.toggle('hidden', !input1);
+
+                modalInputLabel2.textContent = input2?.label || '';
+                modalInput2.value = input2?.value || '';
+                modalInput2.parentElement.classList.toggle('hidden', !input2);
+            }
+
+            modalConfirmBtn.textContent = options.confirmText || 'Confirm';
+            modalConfirmBtn.className = options.danger ? 'confirm-danger' : '';
+
+            modal.classList.remove('hidden');
+            if (hasInputs) modalInput1.focus();
+
+            return new Promise(resolve => {
+                modalResolve = resolve;
+            });
+        }
+
+        function hideModal() {
+            modal.classList.add('hidden');
+            modalForm.reset();
+            modalResolve = null;
+        }
+
+        modalForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (modalResolve) {
+                const inputs = [modalInput1.value.trim(), modalInput2.value.trim()];
+                modalResolve({ confirmed: true, inputs });
+                hideModal();
+            }
+        });
+
+        modalCancelBtn.addEventListener('click', () => {
+             if (modalResolve) {
+                modalResolve({ confirmed: false });
+                hideModal();
+            }
+        });
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal && modalResolve) {
+                modalResolve({ confirmed: false });
+                hideModal();
+            }
+        });
+
+        // --- CORE RENDER FUNCTIONS ---
         async function renderProjectTree() {
             allProjects = await projectService.getAll();
             const treeEl = document.getElementById('project-tree');
@@ -229,8 +359,7 @@
                 if (!parentElement) {
                     parentElement = document.createElement('ul');
                     parentLi.appendChild(parentElement);
-                    const parentToggle = parentLi.querySelector('.toggle');
-                    if (parentToggle) parentToggle.textContent = '▶'; 
+                    parentLi.querySelector('.toggle').textContent = '▶'; 
                 }
                 parentElement.style.display = 'block';
                 parentLi.querySelector('.toggle').textContent = '▼';
@@ -247,7 +376,9 @@
             currentProjectId = projectId;
             const project = allProjects.find(p => p.id === projectId);
             document.getElementById('current-project-name').textContent = project ? project.name : 'None';
-            renderDocuments(projectId); // Update documents when project changes
+            renderDocuments(projectId);
+            renderTeam(projectId);
+            renderComms(projectId);
             document.querySelectorAll('.project-item').forEach(item => {
                 item.classList.toggle('active', item.dataset.id === projectId);
             });
@@ -258,17 +389,56 @@
             documentListEl.innerHTML = '';
             const project = allProjects.find(p => p.id === projectId);
             if (!project || !project.documents || project.documents.length === 0) {
-                documentListEl.innerHTML = '<li>No documents yet.</li>';
+                documentListEl.innerHTML = '<li class="list-item">No documents yet.</li>';
                 return;
             }
             project.documents.forEach(doc => {
                 const li = document.createElement('li');
+                li.className = 'list-item';
                 const a = document.createElement('a');
                 a.href = doc.url;
                 a.textContent = doc.name;
-                a.target = '_blank'; // Open in a new tab
+                a.target = '_blank';
                 li.appendChild(a);
                 documentListEl.appendChild(li);
+            });
+        }
+
+        function renderTeam(projectId) {
+            teamListEl.innerHTML = '';
+            const project = allProjects.find(p => p.id === projectId);
+            if (!project || !project.team || project.team.length === 0) {
+                teamListEl.innerHTML = '<li class="list-item">No team members assigned.</li>';
+                return;
+            }
+            project.team.forEach(member => {
+                const li = document.createElement('li');
+                li.className = 'list-item';
+                li.innerHTML = `
+                    <span>${member.name}</span>
+                    <button class="remove-btn" data-member-id="${member.id}">&times;</button>
+                `;
+                teamListEl.appendChild(li);
+            });
+        }
+
+        function renderComms(projectId) {
+            const commListEl = document.getElementById('comm-list');
+            commListEl.innerHTML = '';
+            const project = allProjects.find(p => p.id === projectId);
+            if (!project || !project.comms || project.comms.length === 0) {
+                commListEl.innerHTML = '<li class="list-item">No communication logs.</li>';
+                return;
+            }
+            project.comms.forEach(log => {
+                const li = document.createElement('li');
+                li.className = 'list-item comm-log-item';
+                const date = new Date(log.timestamp).toLocaleString();
+                li.innerHTML = `
+                    <span>${log.message}</span>
+                    <small>${date}</small>
+                `;
+                commListEl.appendChild(li);
             });
         }
 
@@ -277,23 +447,29 @@
             const projectItem = e.target.closest('.project-item');
             const newProjectBtn = e.target.closest('#new-project-btn');
             if (projectItem) {
-                const projectId = projectItem.dataset.id;
-                selectProject(projectId);
+                selectProject(projectItem.dataset.id);
                 const sublist = projectItem.nextElementSibling;
                 if (sublist && sublist.tagName === 'UL') {
-                    if (sublist.style.display === 'none') {
-                        sublist.style.display = 'block';
-                        projectItem.querySelector('.toggle').textContent = '▼';
-                        expandedProjects.add(projectId);
-                    } else {
-                        sublist.style.display = 'none';
-                        projectItem.querySelector('.toggle').textContent = '▶';
-                        expandedProjects.delete(projectId);
-                    }
+                    const isHidden = sublist.style.display === 'none';
+                    sublist.style.display = isHidden ? 'block' : 'none';
+                    projectItem.querySelector('.toggle').textContent = isHidden ? '▼' : '▶';
+                    if(isHidden) expandedProjects.add(projectItem.dataset.id);
+                    else expandedProjects.delete(projectItem.dataset.id);
                 }
             } else if (newProjectBtn) {
-                newProjectModal.classList.remove('hidden');
-                newProjectNameInput.focus();
+                showModal({
+                    title: 'Create New Project',
+                    inputs: [{ label: 'Project Name' }],
+                    confirmText: 'Create'
+                }).then(async ({ confirmed, inputs }) => {
+                    if (confirmed && inputs[0]) {
+                        const newProject = await projectService.add({ name: inputs[0], parentId: currentProjectId || null });
+                        allProjects.push(newProject);
+                        if (currentProjectId) expandedProjects.add(currentProjectId);
+                        addProjectNodeToDOM(newProject);
+                        selectProject(newProject.id);
+                    }
+                });
             }
         });
         
@@ -307,50 +483,78 @@
             document.getElementById(tabId).classList.add('active');
         });
 
-        addDocumentBtn.addEventListener('click', async () => {
-            if (!currentProjectId) {
-                alert("Please select a project first.");
-                return;
-            }
-            const name = prompt("Enter document name (e.g., 'Project Brief'):");
-            if (!name) return;
-            const url = prompt("Enter document URL (e.g., 'https://docs.google.com/...'):");
-            if (!url) return;
-
-            await projectService.addDocument(currentProjectId, { name, url });
-            allProjects = await projectService.getAll();
-            renderDocuments(currentProjectId);
+        document.getElementById('add-document-btn').addEventListener('click', () => {
+            if (!currentProjectId) return alert("Please select a project first.");
+            showModal({
+                title: 'Add New Document',
+                inputs: [
+                    { label: 'Document Name (e.g., "Project Brief")' },
+                    { label: 'Document URL (e.g., "https://docs.google.com/...")' }
+                ],
+                confirmText: 'Add'
+            }).then(async ({ confirmed, inputs }) => {
+                if (confirmed && inputs[0] && inputs[1]) {
+                    await projectService.addDocument(currentProjectId, { name: inputs[0], url: inputs[1] });
+                    allProjects = await projectService.getAll();
+                    renderDocuments(currentProjectId);
+                }
+            });
         });
 
-        function hideModal() {
-            newProjectModal.classList.add('hidden');
-            newProjectForm.reset();
-        }
-
-        cancelBtn.addEventListener('click', hideModal);
-        newProjectModal.addEventListener('click', (e) => {
-            if (e.target === newProjectModal) hideModal();
+        document.getElementById('add-member-btn').addEventListener('click', () => {
+            if (!currentProjectId) return alert("Please select a project first.");
+            showModal({
+                title: 'Add Team Member',
+                inputs: [{ label: 'Member Name' }],
+                confirmText: 'Add'
+            }).then(async ({ confirmed, inputs }) => {
+                if (confirmed && inputs[0]) {
+                    await projectService.addTeamMember(currentProjectId, inputs[0]);
+                    allProjects = await projectService.getAll();
+                    renderTeam(currentProjectId);
+                }
+            });
         });
 
-        newProjectForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = newProjectNameInput.value.trim();
-            if (name) {
-                const newProjectData = { name, parentId: currentProjectId || null };
-                const newProject = await projectService.add(newProjectData);
-                allProjects.push(newProject);
-                if (currentProjectId) expandedProjects.add(currentProjectId);
-                addProjectNodeToDOM(newProject);
-                selectProject(newProject.id);
-                hideModal();
+        teamListEl.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('.remove-btn');
+            if (removeBtn) {
+                const memberId = removeBtn.dataset.memberId;
+                showModal({
+                    title: 'Remove Team Member',
+                    message: 'Are you sure you want to remove this team member?',
+                    confirmText: 'Remove',
+                    danger: true
+                }).then(async ({ confirmed }) => {
+                    if (confirmed) {
+                        await projectService.removeTeamMember(currentProjectId, memberId);
+                        allProjects = await projectService.getAll();
+                        renderTeam(currentProjectId);
+                    }
+                });
             }
+        });
+        
+        document.getElementById('add-comm-btn').addEventListener('click', () => {
+            if (!currentProjectId) return alert("Please select a project first.");
+            showModal({
+                title: 'Add Communication Log',
+                inputs: [{ label: 'Log Message' }],
+                confirmText: 'Add Log'
+            }).then(async ({ confirmed, inputs }) => {
+                if (confirmed && inputs[0]) {
+                    await projectService.addCommLog(currentProjectId, inputs[0]);
+                    allProjects = await projectService.getAll();
+                    renderComms(currentProjectId);
+                }
+            });
         });
 
         // --- INITIALIZATION ---
         async function initializeApp() {
             const existingProjects = await projectService.getAll();
             if (existingProjects.length === 0) {
-                 await projectService.add({ name: 'Main Project Alpha', parentId: null });
+                 await projectService.add({ name: 'Main Project Alpha' });
             }
             await renderProjectTree();
             if (allProjects.length > 0) {
