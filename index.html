@@ -157,11 +157,15 @@
             <h3 id="modal-title">Title</h3>
             <p id="modal-message" class="hidden"></p>
             <form id="modal-form">
-                <div id="modal-input-container" class="hidden">
-                    <label id="modal-input-label-1" for="modal-input-1">Label 1</label>
-                    <input type="text" id="modal-input-1" autocomplete="off">
-                    <label id="modal-input-label-2" for="modal-input-2">Label 2</label>
-                    <input type="text" id="modal-input-2" autocomplete="off">
+                <div id="modal-input-container">
+                    <div id="modal-input-group-1" class="hidden">
+                        <label id="modal-input-label-1" for="modal-input-1">Label 1</label>
+                        <input type="text" id="modal-input-1" autocomplete="off">
+                    </div>
+                    <div id="modal-input-group-2" class="hidden">
+                        <label id="modal-input-label-2" for="modal-input-2">Label 2</label>
+                        <input type="text" id="modal-input-2" autocomplete="off">
+                    </div>
                 </div>
                 <div class="modal-actions">
                     <button type="button" id="modal-cancel-btn">Cancel</button>
@@ -240,8 +244,10 @@
         const modalTitle = document.getElementById('modal-title');
         const modalMessage = document.getElementById('modal-message');
         const modalInputContainer = document.getElementById('modal-input-container');
+        const modalInputGroup1 = document.getElementById('modal-input-group-1');
         const modalInput1 = document.getElementById('modal-input-1');
         const modalInputLabel1 = document.getElementById('modal-input-label-1');
+        const modalInputGroup2 = document.getElementById('modal-input-group-2');
         const modalInput2 = document.getElementById('modal-input-2');
         const modalInputLabel2 = document.getElementById('modal-input-label-2');
         const modalCancelBtn = document.getElementById('modal-cancel-btn');
@@ -260,13 +266,22 @@
 
             if (hasInputs) {
                 const [input1, input2] = options.inputs;
-                modalInputLabel1.textContent = input1?.label || '';
-                modalInput1.value = input1?.value || '';
-                modalInput1.parentElement.classList.toggle('hidden', !input1);
 
-                modalInputLabel2.textContent = input2?.label || '';
-                modalInput2.value = input2?.value || '';
-                modalInput2.parentElement.classList.toggle('hidden', !input2);
+                if (input1) {
+                    modalInputLabel1.textContent = input1.label || '';
+                    modalInput1.value = input1.value || '';
+                    modalInputGroup1.classList.remove('hidden');
+                } else {
+                    modalInputGroup1.classList.add('hidden');
+                }
+
+                if (input2) {
+                    modalInputLabel2.textContent = input2.label || '';
+                    modalInput2.value = input2.value || '';
+                    modalInputGroup2.classList.remove('hidden');
+                } else {
+                    modalInputGroup2.classList.add('hidden');
+                }
             }
 
             modalConfirmBtn.textContent = options.confirmText || 'Confirm';
