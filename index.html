@@ -6,65 +6,74 @@
     <title>Project Janus</title>
     <style>
         body { font-family: sans-serif; display: flex; padding: 20px; background-color: #f9f9f9; margin: 0; }
-        #sidebar { width: 300px; border: 1px solid #ccc; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; }
-        
-        /* Main Navigation Styles */
-        #main-nav {
-            list-style: none;
-            padding: 0;
-            margin: 0;
+        .hidden { display: none !important; }
+
+        /* Auth Screen Styles */
+        #auth-container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
         }
-        .main-nav-item {
-            padding: 12px 8px;
-            border-radius: 5px;
+        #auth-box {
+            width: 350px;
+            padding: 30px;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        #auth-box h2 { text-align: center; margin-top: 0; }
+        #auth-box input {
+            width: 100%; padding: 10px; margin-bottom: 15px; box-sizing: border-box;
+        }
+        #auth-box button {
+            width: 100%; padding: 10px; border: none; border-radius: 5px;
+            background-color: #4a90e2; color: white; font-size: 16px; cursor: pointer;
+        }
+        #auth-toggle {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            color: #007bff;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
         }
-        .main-nav-item:hover {
-            background-color: #f0f0f0;
-        }
-        .main-nav-item.active {
-            background-color: #e0e0ff;
-            font-weight: bold;
-        }
-        #project-tree-container {
-            padding-left: 20px;
+        #auth-error {
+            color: red;
+            font-size: 12px;
+            margin-bottom: 10px;
+            text-align: center;
         }
 
+        /* Main App Styles */
+        #app-container {
+            display: flex;
+            width: 100%;
+        }
+        #sidebar { width: 300px; border: 1px solid #ccc; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; }
+        #main-nav { list-style: none; padding: 0; margin: 0; }
+        .main-nav-item { padding: 12px 8px; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: 500; }
+        .main-nav-item:hover { background-color: #f0f0f0; }
+        .main-nav-item.active { background-color: #e0e0ff; font-weight: bold; }
+        #project-tree-container { padding-left: 20px; }
         #project-tree { list-style: none; padding: 0; margin-top: 10px; }
         #project-tree ul { list-style: none; padding-left: 20px; }
-        .project-item { 
-            padding: 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; 
-        }
+        .project-item { padding: 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
         .project-item:hover { background-color: #f0f0f0; }
         .project-item.active { background-color: #d0d0ff; }
         .project-name-wrapper { display: flex; align-items: center; flex-grow: 1; min-width: 0; }
         .project-name-wrapper span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .toggle { margin-right: 8px; width: 16px; text-align: center; font-size: 10px; user-select: none; }
         .project-icon { margin-right: 8px; }
-        
-        .sidebar-actions {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .sidebar-actions button {
-            padding: 8px 12px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            cursor: pointer;
-        }
-        .project-actions {
-            display: none;
-            gap: 5px;
-        }
-        .project-item:hover .project-actions {
-            display: flex;
-        }
-        .project-action-btn {
-            background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 4px;
-        }
+        .sidebar-actions { display: flex; gap: 10px; margin-bottom: 10px; }
+        .sidebar-actions button { padding: 8px 12px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; }
+        .project-actions { display: none; gap: 5px; }
+        .project-item:hover .project-actions { display: flex; }
+        .project-action-btn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 4px; }
+        #logout-btn { width: 100%; margin-top: 20px; background-color: #f0f0f0; }
 
         /* Modal Styles */
         .modal-backdrop {
@@ -83,57 +92,29 @@
         }
         .modal-content textarea { min-height: 80px; resize: vertical; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
-        .modal-actions button {
-            padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer;
-        }
-        .modal-actions button[type="submit"] {
-            background-color: #4a90e2; border-color: #4a90e2; color: white;
-        }
-        .modal-actions .confirm-danger {
-             background-color: #d9534f; border-color: #d9534f; color: white;
-        }
-        .hidden { display: none; }
-
+        .modal-actions button { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; }
+        .modal-actions button[type="submit"] { background-color: #4a90e2; border-color: #4a90e2; color: white; }
+        .modal-actions .confirm-danger { background-color: #d9534f; border-color: #d9534f; color: white; }
+        
         /* Tab Styles */
-        .tab-container {
-            display: flex;
-            border-bottom: 2px solid #ccc;
-            margin-top: 20px;
-        }
-        .tab-button {
-            padding: 10px 20px; border: none; background-color: transparent; cursor: pointer;
-            font-size: 16px; border-bottom: 2px solid transparent; margin-bottom: -2px;
-        }
+        .tab-container { display: flex; border-bottom: 2px solid #ccc; margin-top: 20px; }
+        .tab-button { padding: 10px 20px; border: none; background-color: transparent; cursor: pointer; font-size: 16px; border-bottom: 2px solid transparent; margin-bottom: -2px; }
         .tab-button:hover { background-color: #f0f0f0; }
         .tab-button.active { border-color: #007bff; font-weight: bold; }
-        
         .main-panel, .tab-panel { display: none; }
         .main-panel.active, .tab-panel.active { display: block; }
-        
         .tab-panel { padding-top: 20px; }
-        .panel-header {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
-        }
-        .list-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 8px; border-bottom: 1px solid #eee;
-        }
-        .remove-btn {
-            background: none; border: none; color: red; cursor: pointer; font-size: 16px;
-        }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
+        .remove-btn { background: none; border: none; color: red; cursor: pointer; font-size: 16px; }
         .comm-log-item small { color: #666; margin-left: 15px; flex-shrink: 0; }
 
         /* Kanban Styles */
         .kanban-board { display: flex; gap: 20px; width: 100%; overflow-x: auto; }
-        .kanban-column {
-            flex: 1; min-width: 250px; background-color: #f4f5f7; border-radius: 8px; padding: 10px;
-        }
+        .kanban-column { flex: 1; min-width: 250px; background-color: #f4f5f7; border-radius: 8px; padding: 10px; }
         .kanban-column h4 { margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid #ccc; }
         .kanban-tasks { min-height: 200px; display: flex; flex-direction: column; gap: 10px; }
-        .task-card {
-            background-color: #fff; padding: 15px; border-radius: 5px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: grab; border-left: 5px solid transparent;
-        }
+        .task-card { background-color: #fff; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: grab; border-left: 5px solid transparent; }
         .task-card.priority-high { border-left-color: #d9534f; }
         .task-card.priority-medium { border-left-color: #f0ad4e; }
         .task-card.priority-low { border-left-color: #5cb85c; }
@@ -143,45 +124,23 @@
         .drag-over { background-color: #e0e0ff; }
         
         /* Calendar Styles */
-        #calendar-header {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
-        }
+        #calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         #calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
-        .calendar-day {
-            border: 1px solid #ccc; min-height: 100px; padding: 5px; background-color: #fff;
-        }
+        .calendar-day { border: 1px solid #ccc; min-height: 100px; padding: 5px; background-color: #fff; }
         .calendar-day-header { font-weight: bold; text-align: center; padding-bottom: 5px; }
         .calendar-day-number { font-size: 12px; color: #555; }
-        .calendar-task {
-            font-size: 11px; padding: 2px 4px; border-radius: 3px; background-color: #e0e0ff;
-            margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
+        .calendar-task { font-size: 11px; padding: 2px 4px; border-radius: 3px; background-color: #e0e0ff; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        /* Contacts & Invoices Styles */
-        #contact-list, #invoice-list { list-style: none; padding: 0; }
-        .contact-item, .invoice-item {
-            background-color: #fff;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .contact-info div, .invoice-info div { margin-bottom: 5px; }
-        .contact-name, .invoice-client { font-weight: bold; }
-        .contact-company, .invoice-details { color: #555; font-style: italic; }
+        /* Contacts, Invoices, Expenses Styles */
+        #contact-list, #invoice-list, #expense-list { list-style: none; padding: 0; }
+        .contact-item, .invoice-item, .expense-item { background-color: #fff; padding: 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .contact-info div, .invoice-info div, .expense-info div { margin-bottom: 5px; }
+        .contact-name, .invoice-client, .expense-description { font-weight: bold; }
+        .contact-company, .invoice-details, .expense-details { color: #555; font-style: italic; }
         .contact-channels { font-size: 12px; color: #777; }
         .contact-channels span { margin-right: 5px; }
         .item-actions { display: flex; gap: 10px; align-items: center; }
-        .status-badge {
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-            color: white;
-        }
+        .status-badge { padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; }
         .status-draft { background-color: #777; }
         .status-sent { background-color: #f0ad4e; }
         .status-paid { background-color: #5cb85c; }
@@ -189,107 +148,134 @@
 </head>
 <body>
 
-    <div id="sidebar">
-        <h2>Janus</h2>
-        <ul id="main-nav">
-            <li class="main-nav-item active" data-panel="project-panel">📁 Projects</li>
-            <div id="project-tree-container">
-                 <div class="sidebar-actions">
-                    <button id="new-project-btn">New Project</button>
-                </div>
-                <p><small>Select a project to create a sub-project under it.</small></p>
-                <ul id="project-tree"></ul>
-            </div>
-            <li class="main-nav-item" data-panel="calendar-panel">📅 Calendar</li>
-            <li class="main-nav-item" data-panel="contacts-panel">👥 Contacts</li>
-            <li class="main-nav-item" data-panel="invoices-panel">🧾 Invoices</li>
-        </ul>
+    <div id="auth-container">
+        <div id="auth-box">
+            <h2 id="auth-title">Login</h2>
+            <p id="auth-error"></p>
+            <form id="auth-form">
+                <input type="email" id="auth-email" placeholder="Email" required>
+                <input type="password" id="auth-password" placeholder="Password" required>
+                <button type="submit" id="auth-submit-btn">Login</button>
+            </form>
+            <p id="auth-toggle">Don't have an account? Sign Up</p>
+        </div>
     </div>
-    
-    <div id="main-content" style="padding-left: 20px; flex-grow: 1;">
-        <div class="main-panel active" id="project-panel">
-            <h3>Selected Project:</h3>
-            <p id="current-project-name">None</p>
-        
-            <div class="tab-container" id="project-tabs">
-                <button class="tab-button active" data-tab="tasks-panel">Tasks</button>
-                <button class="tab-button" data-tab="documents-panel">Documents</button>
-                <button class="tab-button" data-tab="communication-panel">Communication</button>
-                <button class="tab-button" data-tab="team-panel">Team</button>
-            </div>
-        
-            <div class="tab-content-container">
-                <div class="tab-panel active" id="tasks-panel">
-                     <div class="panel-header">
-                        <h4>Task Board</h4>
-                        <button id="add-task-btn">New Task</button>
+
+    <div id="app-container" class="hidden">
+        <div id="sidebar">
+            <h2>Janus</h2>
+            <ul id="main-nav">
+                <li class="main-nav-item active" data-panel="project-panel">📁 Projects</li>
+                <div id="project-tree-container">
+                     <div class="sidebar-actions">
+                        <button id="new-project-btn">New Project</button>
                     </div>
-                    <div class="kanban-board">
-                        <div class="kanban-column" data-status="mytodo">
-                            <h4>My To Do</h4>
-                            <div class="kanban-tasks"></div>
-                        </div>
-                         <div class="kanban-column" data-status="assignedtodo">
-                            <h4>Assigned To Do</h4>
-                            <div class="kanban-tasks"></div>
-                        </div>
-                        <div class="kanban-column" data-status="inprogress">
-                            <h4>In Progress</h4>
-                            <div class="kanban-tasks"></div>
-                        </div>
-                        <div class="kanban-column" data-status="done">
-                            <h4>Done</h4>
-                            <div class="kanban-tasks"></div>
-                        </div>
-                    </div>
+                    <p><small>Select a project to create a sub-project under it.</small></p>
+                    <ul id="project-tree"></ul>
                 </div>
-        
-                <div class="tab-panel" id="documents-panel">
-                    <div class="panel-header">
-                        <h4>Project Documents</h4>
-                        <button id="add-document-btn">Add Document</button>
-                    </div>
-                    <ul id="document-list"></ul>
-                </div>
-        
-                <div class="tab-panel" id="communication-panel">
-                    <div class="panel-header">
-                        <h4>Communication Log</h4>
-                        <button id="add-comm-btn">Add Log Entry</button>
-                    </div>
-                    <ul id="comm-list"></ul>
-                </div>
-        
-                <div class="tab-panel" id="team-panel">
-                    <div class="panel-header">
-                        <h4>Team Members</h4>
-                        <button id="add-member-btn">Add Member</button>
-                    </div>
-                    <ul id="team-list"></ul>
-                </div>
-            </div>
+                <li class="main-nav-item" data-panel="calendar-panel">📅 Calendar</li>
+                <li class="main-nav-item" data-panel="contacts-panel">👥 Contacts</li>
+                <li class="main-nav-item" data-panel="invoices-panel">🧾 Invoices</li>
+                <li class="main-nav-item" data-panel="expenses-panel">💶 Expenses</li>
+            </ul>
+            <button id="logout-btn">Logout</button>
         </div>
-        <div class="main-panel" id="calendar-panel">
-            <div id="calendar-header">
-                <button id="prev-month-btn">&lt;</button>
-                <h3 id="month-year-display">Month Year</h3>
-                <button id="next-month-btn">&gt;</button>
+        
+        <div id="main-content" style="padding-left: 20px; flex-grow: 1;">
+            <div class="main-panel active" id="project-panel">
+                <h3>Selected Project:</h3>
+                <p id="current-project-name">None</p>
+            
+                <div class="tab-container" id="project-tabs">
+                    <button class="tab-button active" data-tab="tasks-panel">Tasks</button>
+                    <button class="tab-button" data-tab="documents-panel">Documents</button>
+                    <button class="tab-button" data-tab="communication-panel">Communication</button>
+                    <button class="tab-button" data-tab="team-panel">Team</button>
+                </div>
+            
+                <div class="tab-content-container">
+                    <div class="tab-panel active" id="tasks-panel">
+                         <div class="panel-header">
+                            <h4>Task Board</h4>
+                            <button id="add-task-btn">New Task</button>
+                        </div>
+                        <div class="kanban-board">
+                            <div class="kanban-column" data-status="mytodo">
+                                <h4>My To Do</h4>
+                                <div class="kanban-tasks"></div>
+                            </div>
+                             <div class="kanban-column" data-status="assignedtodo">
+                                <h4>Assigned To Do</h4>
+                                <div class="kanban-tasks"></div>
+                            </div>
+                            <div class="kanban-column" data-status="inprogress">
+                                <h4>In Progress</h4>
+                                <div class="kanban-tasks"></div>
+                            </div>
+                            <div class="kanban-column" data-status="done">
+                                <h4>Done</h4>
+                                <div class="kanban-tasks"></div>
+                            </div>
+                        </div>
+                    </div>
+            
+                    <div class="tab-panel" id="documents-panel">
+                        <div class="panel-header">
+                            <h4>Project Documents</h4>
+                            <button id="add-document-btn">Add Document</button>
+                        </div>
+                        <ul id="document-list"></ul>
+                    </div>
+            
+                    <div class="tab-panel" id="communication-panel">
+                        <div class="panel-header">
+                            <h4>Communication Log</h4>
+                            <button id="add-comm-btn">Add Log Entry</button>
+                        </div>
+                        <ul id="comm-list"></ul>
+                    </div>
+            
+                    <div class="tab-panel" id="team-panel">
+                        <div class="panel-header">
+                            <h4>Team Members</h4>
+                            <button id="add-member-btn">Add Member</button>
+                        </div>
+                        <ul id="team-list"></ul>
+                    </div>
+                </div>
             </div>
-            <div id="calendar-grid"></div>
-        </div>
-        <div class="main-panel" id="contacts-panel">
-            <div class="panel-header">
-                <h2>Contacts (CRM)</h2>
-                <button id="add-contact-btn">Add Contact</button>
+            <div class="main-panel" id="calendar-panel">
+                <div id="calendar-header">
+                    <button id="prev-month-btn">&lt;</button>
+                    <h3 id="month-year-display">Month Year</h3>
+                    <button id="next-month-btn">&gt;</button>
+                </div>
+                <div id="calendar-grid"></div>
             </div>
-            <ul id="contact-list"></ul>
-        </div>
-        <div class="main-panel" id="invoices-panel">
-            <div class="panel-header">
-                <h2>Invoices</h2>
-                <button id="create-invoice-btn">Create Invoice</button>
+            <div class="main-panel" id="contacts-panel">
+                <div class="panel-header">
+                    <h2>Contacts (CRM)</h2>
+                    <button id="add-contact-btn">Add Contact</button>
+                </div>
+                <ul id="contact-list"></ul>
             </div>
-            <ul id="invoice-list"></ul>
+            <div class="main-panel" id="invoices-panel">
+                <div class="panel-header">
+                    <h2>Invoices</h2>
+                    <button id="create-invoice-btn">Create Invoice</button>
+                </div>
+                <ul id="invoice-list"></ul>
+            </div>
+            <div class="main-panel" id="expenses-panel">
+                <div class="panel-header">
+                    <h2>Expenses</h2>
+                    <div>
+                        <button id="export-expenses-btn">Export Reports</button>
+                        <button id="add-expense-btn">Add Expense</button>
+                    </div>
+                </div>
+                <ul id="expense-list"></ul>
+            </div>
         </div>
     </div>
 
@@ -311,180 +297,52 @@
     </div>
 
     <script type="module">
-        // --- DATA STORE ---
-        const projectService = {
-            getAll: async () => JSON.parse(localStorage.getItem('janus_projects')) || [],
-            saveAll: async (projects) => localStorage.setItem('janus_projects', JSON.stringify(projects)),
-            add: async (data) => {
-                const projects = await projectService.getAll();
-                const newProject = { 
-                    id: `proj_${crypto.randomUUID()}`, 
-                    documents: [], team: [], comms: [], tasks: [],
-                    icon: getIconForProjectName(data.name),
-                    ...data 
-                };
-                projects.push(newProject);
-                await projectService.saveAll(projects);
-                return newProject;
-            },
-            deleteProject: async (projectId) => {
-                let projects = await projectService.getAll();
-                const projectsToDelete = new Set([projectId]);
-                let changed = true;
-                while (changed) {
-                    changed = false;
-                    const children = projects.filter(p => projectsToDelete.has(p.parentId));
-                    children.forEach(child => {
-                        if (!projectsToDelete.has(child.id)) {
-                            projectsToDelete.add(child.id);
-                            changed = true;
-                        }
-                    });
-                }
-                const remainingProjects = projects.filter(p => !projectsToDelete.has(p.id));
-                await projectService.saveAll(remainingProjects);
-            },
-            renameProject: async (projectId, newName) => {
-                const projects = await projectService.getAll();
-                const project = projects.find(p => p.id === projectId);
-                if (project) {
-                    project.name = newName;
-                    project.icon = getIconForProjectName(newName);
-                    await projectService.saveAll(projects);
-                }
-            },
-            addDocument: async (projectId, docData) => {
-                const projects = await projectService.getAll();
-                const project = projects.find(p => p.id === projectId);
-                if (!project) return null;
-                const newDocument = { id: `doc_${crypto.randomUUID()}`, ...docData };
-                project.documents.push(newDocument);
-                await projectService.saveAll(projects);
-                return newDocument;
-            },
-            addTeamMember: async (projectId, contactId) => {
-                const projects = await projectService.getAll();
-                const project = projects.find(p => p.id === projectId);
-                if (!project) return null;
-                if (!project.team.includes(contactId)) {
-                    project.team.push(contactId);
-                    await projectService.saveAll(projects);
-                }
-            },
-            removeTeamMember: async (projectId, contactId) => {
-                const projects = await projectService.getAll();
-                const project = projects.find(p => p.id === projectId);
-                if (!project) return;
-                project.team = project.team.filter(id => id !== contactId);
-                await projectService.saveAll(projects);
-            },
-            addCommLog: async (projectId, message) => {
-                const projects = await projectService.getAll();
-                const project = projects.find(p => p.id === projectId);
-                if (!project) return null;
-                const newLog = { 
-                    id: `comm_${crypto.randomUUID()}`, 
-                    message,
-                    timestamp: new Date().toISOString()
-                };
-                project.comms.unshift(newLog);
-                await projectService.saveAll(projects);
-                return newLog;
-            },
-            addTask: async (projectId, taskData) => {
-                const projects = await projectService.getAll();
-                const project = projects.find(p => p.id === projectId);
-                if (!project) return null;
-                const newTask = {
-                    id: `task_${crypto.randomUUID()}`,
-                    status: taskData.assignee.startsWith('Me') ? 'mytodo' : 'assignedtodo',
-                    ...taskData
-                };
-                project.tasks.push(newTask);
-                await projectService.saveAll(projects);
-                return newTask;
-            },
-            updateTask: async (projectId, taskId, updatedData) => {
-                const projects = await projectService.getAll();
-                const project = projects.find(p => p.id === projectId);
-                if (!project) return;
-                const taskIndex = project.tasks.findIndex(t => t.id === taskId);
-                if (taskIndex > -1) {
-                    project.tasks[taskIndex] = { ...project.tasks[taskIndex], ...updatedData };
-                    await projectService.saveAll(projects);
-                }
-            },
-            updateTaskStatus: async (projectId, taskId, newStatus) => {
-                const projects = await projectService.getAll();
-                const project = projects.find(p => p.id === projectId);
-                if (!project) return;
-                const task = project.tasks.find(t => t.id === taskId);
-                if (task) {
-                    task.status = newStatus;
-                    await projectService.saveAll(projects);
-                }
-            }
+        // Import Firebase SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, writeBatch, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhb65qgc3OPYkqOvFDcdUY0RwO2GRjBlI",
+            authDomain: "project-janus-app.firebaseapp.com",
+            projectId: "project-janus-app",
+            storageBucket: "project-janus-app.firebasestorage.app",
+            messagingSenderId: "830301768579",
+            appId: "1:830301768579:web:e050e4746a107059f584b6",
+            measurementId: "G-LK79N7HB65"
         };
 
-        const contactService = {
-            getAll: async () => JSON.parse(localStorage.getItem('janus_contacts')) || [],
-            saveAll: async (contacts) => localStorage.setItem('janus_contacts', JSON.stringify(contacts)),
-            add: async (contactData) => {
-                const contacts = await contactService.getAll();
-                const newContact = { id: `con_${crypto.randomUUID()}`, ...contactData };
-                contacts.push(newContact);
-                await contactService.saveAll(contacts);
-                return newContact;
-            },
-            update: async (contactId, updatedData) => {
-                const contacts = await contactService.getAll();
-                const contactIndex = contacts.findIndex(c => c.id === contactId);
-                if (contactIndex > -1) {
-                    contacts[contactIndex] = { ...contacts[contactIndex], ...updatedData };
-                    await contactService.saveAll(contacts);
-                }
-            },
-            delete: async (contactId) => {
-                let contacts = await contactService.getAll();
-                contacts = contacts.filter(c => c.id !== contactId);
-                await contactService.saveAll(contacts);
-            }
-        };
-
-        const invoiceService = {
-            getAll: async () => JSON.parse(localStorage.getItem('janus_invoices')) || [],
-            saveAll: async (invoices) => localStorage.setItem('janus_invoices', JSON.stringify(invoices)),
-            add: async (invoiceData) => {
-                const invoices = await invoiceService.getAll();
-                const newInvoice = { id: `inv_${crypto.randomUUID()}`, ...invoiceData };
-                invoices.push(newInvoice);
-                await invoiceService.saveAll(invoices);
-                return newInvoice;
-            },
-            update: async (invoiceId, updatedData) => {
-                const invoices = await invoiceService.getAll();
-                const invoiceIndex = invoices.findIndex(i => i.id === invoiceId);
-                if (invoiceIndex > -1) {
-                    invoices[invoiceIndex] = { ...invoices[invoiceIndex], ...updatedData };
-                    await invoiceService.saveAll(invoices);
-                }
-            },
-            delete: async (invoiceId) => {
-                let invoices = await invoiceService.getAll();
-                invoices = invoices.filter(i => i.id !== invoiceId);
-                await invoiceService.saveAll(invoices);
-            }
-        };
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
         // --- GLOBAL STATE ---
         let allProjects = [];
         let allContacts = [];
         let allInvoices = [];
+        let allExpenses = [];
         let currentProjectId = null;
         let expandedProjects = new Set();
+        let currentUserId = null;
+        let unsubscribeListeners = [];
+        
         const teamListEl = document.getElementById('team-list');
         let currentCalendarDate = new Date();
         
+        // UI Elements
+        const authContainer = document.getElementById('auth-container');
+        const appContainer = document.getElementById('app-container');
+        const authForm = document.getElementById('auth-form');
+        const authTitle = document.getElementById('auth-title');
+        const authSubmitBtn = document.getElementById('auth-submit-btn');
+        const authToggle = document.getElementById('auth-toggle');
+        const authError = document.getElementById('auth-error');
+        const authEmail = document.getElementById('auth-email');
+        const authPassword = document.getElementById('auth-password');
+        const logoutBtn = document.getElementById('logout-btn');
+
         // Modal Elements
         const modal = document.getElementById('generic-modal');
         const modalForm = document.getElementById('modal-form');
@@ -494,6 +352,79 @@
         const modalCancelBtn = document.getElementById('modal-cancel-btn');
         const modalConfirmBtn = document.getElementById('modal-confirm-btn');
         let modalResolve = null;
+
+        // --- DATA SERVICES (FIREBASE) ---
+        const getCollectionRef = (coll) => collection(db, 'users', currentUserId, coll);
+
+        const projectService = {
+            add: (data) => addDoc(getCollectionRef('projects'), { ...data, icon: getIconForProjectName(data.name) }),
+            renameProject: (id, newName) => updateDoc(doc(db, 'users', currentUserId, 'projects', id), { name: newName, icon: getIconForProjectName(newName) }),
+            deleteProject: async (id) => {
+                const batch = writeBatch(db);
+                const projectsToDelete = new Set([id]);
+                let changed = true;
+                while(changed) {
+                    changed = false;
+                    const q = query(getCollectionRef('projects'), where('parentId', 'in', Array.from(projectsToDelete)));
+                    const snapshot = await getDocs(q);
+                    snapshot.forEach(doc => {
+                        if (!projectsToDelete.has(doc.id)) {
+                            projectsToDelete.add(doc.id);
+                            changed = true;
+                        }
+                    });
+                }
+                projectsToDelete.forEach(projectId => batch.delete(doc(db, 'users', currentUserId, 'projects', projectId)));
+                await batch.commit();
+            },
+            addTeamMember: (id, contactId) => {
+                const project = allProjects.find(p => p.id === id);
+                const updatedTeam = [...(project.team || []), contactId];
+                return updateDoc(doc(db, 'users', currentUserId, 'projects', id), { team: updatedTeam });
+            },
+            removeTeamMember: (id, contactId) => {
+                 const project = allProjects.find(p => p.id === id);
+                 const updatedTeam = (project.team || []).filter(cid => cid !== contactId);
+                 return updateDoc(doc(db, 'users', currentUserId, 'projects', id), { team: updatedTeam });
+            },
+            updateProjectSubcollection: (projectId, subcollection, data) => {
+                 const project = allProjects.find(p => p.id === projectId);
+                 const updatedCollection = [...(project[subcollection] || []), data];
+                 return updateDoc(doc(db, 'users', currentUserId, 'projects', projectId), { [subcollection]: updatedCollection });
+            },
+            updateTask: (projectId, taskId, updatedData) => {
+                const project = allProjects.find(p => p.id === projectId);
+                const updatedTasks = project.tasks.map(t => t.id === taskId ? {...t, ...updatedData} : t);
+                return updateDoc(doc(db, 'users', currentUserId, 'projects', projectId), { tasks: updatedTasks });
+            },
+            updateTaskStatus: (projectId, taskId, newStatus) => {
+                const project = allProjects.find(p => p.id === projectId);
+                const task = project.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.status = newStatus;
+                    return updateDoc(doc(db, 'users', currentUserId, 'projects', projectId), { tasks: project.tasks });
+                }
+            }
+        };
+
+        const contactService = {
+            add: (data) => addDoc(getCollectionRef('contacts'), data),
+            update: (id, data) => updateDoc(doc(db, 'users', currentUserId, 'contacts', id), data),
+            delete: (id) => deleteDoc(doc(db, 'users', currentUserId, 'contacts', id)),
+        };
+
+        const invoiceService = {
+            add: (data) => addDoc(getCollectionRef('invoices'), data),
+            update: (id, data) => updateDoc(doc(db, 'users', currentUserId, 'invoices', id), data),
+            delete: (id) => deleteDoc(doc(db, 'users', currentUserId, 'invoices', id)),
+        };
+
+        const expenseService = {
+            add: (data) => addDoc(getCollectionRef('expenses'), data),
+            update: (id, data) => updateDoc(doc(db, 'users', currentUserId, 'expenses', id), data),
+            delete: (id) => deleteDoc(doc(db, 'users', currentUserId, 'expenses', id)),
+        };
+
 
         // --- HELPER FUNCTIONS ---
         function formatDateGerman(dateString) {
@@ -608,8 +539,7 @@
         });
 
         // --- CORE RENDER FUNCTIONS ---
-        async function renderProjectTree() {
-            allProjects = await projectService.getAll();
+        function renderProjectTree() {
             const treeEl = document.getElementById('project-tree');
             treeEl.innerHTML = '';
             const projectMap = new Map(allProjects.map(p => [p.id, { ...p, children: [] }]));
@@ -658,28 +588,6 @@
             return li;
         }
         
-        function addProjectNodeToDOM(project) {
-            const newNode = createProjectNode({ ...project, children: [] });
-            let parentElement;
-            if (project.parentId) {
-                const parentLi = document.querySelector(`li[data-id="${project.parentId}"]`);
-                parentElement = parentLi.querySelector('ul');
-                if (!parentElement) {
-                    parentElement = document.createElement('ul');
-                    parentLi.appendChild(parentElement);
-                    parentLi.querySelector('.toggle').textContent = '▶'; 
-                }
-                parentElement.style.display = 'block';
-                parentLi.querySelector('.toggle').textContent = '▼';
-            } else {
-                parentElement = document.getElementById('project-tree');
-            }
-            parentElement.appendChild(newNode);
-            const children = Array.from(parentElement.children);
-            children.sort((a, b) => a.textContent.trim().localeCompare(b.textContent.trim()));
-            children.forEach(child => parentElement.appendChild(child));
-        }
-
         function selectProject(projectId) {
             currentProjectId = projectId;
             const project = allProjects.find(p => p.id === projectId);
@@ -826,8 +734,7 @@
             }
         }
         
-        async function renderContacts() {
-            allContacts = await contactService.getAll();
+        function renderContacts() {
             const contactListEl = document.getElementById('contact-list');
             contactListEl.innerHTML = '';
             if (allContacts.length === 0) {
@@ -859,8 +766,7 @@
             });
         }
 
-        async function renderInvoices() {
-            allInvoices = await invoiceService.getAll();
+        function renderInvoices() {
             const invoiceListEl = document.getElementById('invoice-list');
             invoiceListEl.innerHTML = '';
             if (allInvoices.length === 0) {
@@ -889,6 +795,33 @@
             });
         }
 
+        function renderExpenses() {
+            const expenseListEl = document.getElementById('expense-list');
+            expenseListEl.innerHTML = '';
+            if (allExpenses.length === 0) {
+                expenseListEl.innerHTML = '<li class="list-item">No expenses yet.</li>';
+                return;
+            }
+            allExpenses.forEach(expense => {
+                const li = document.createElement('li');
+                li.className = 'expense-item';
+                li.dataset.expenseId = expense.id;
+                li.innerHTML = `
+                    <div class="expense-info">
+                        <div class="expense-description">${expense.description}</div>
+                        <div class="expense-details">
+                            Amount: €${expense.amount} | Date: ${formatDateGerman(expense.date)} | Category: ${expense.category}
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="project-action-btn" data-action="edit-expense">✏️</button>
+                        <button class="project-action-btn" data-action="delete-expense">🗑️</button>
+                    </div>
+                `;
+                expenseListEl.appendChild(li);
+            });
+        }
+
         // --- EVENT LISTENERS ---
         document.getElementById('sidebar').addEventListener('click', (e) => {
             const newProjectBtn = e.target.closest('#new-project-btn');
@@ -901,11 +834,7 @@
                     confirmText: 'Create'
                 }).then(async ({ confirmed, inputs }) => {
                     if (confirmed && inputs[0]) {
-                        const newProject = await projectService.add({ name: inputs[0], parentId: currentProjectId || null });
-                        allProjects.push(newProject);
-                        if (currentProjectId) expandedProjects.add(currentProjectId);
-                        addProjectNodeToDOM(newProject);
-                        selectProject(newProject.id);
+                        await projectService.add({ name: inputs[0], parentId: currentProjectId || null });
                     }
                 });
                 return;
@@ -938,7 +867,6 @@
                         }).then(async ({ confirmed, inputs }) => {
                             if (confirmed && inputs[0]) {
                                 await projectService.renameProject(projectId, inputs[0]);
-                                initializeApp();
                             }
                         });
                         break;
@@ -953,7 +881,6 @@
                             if (confirmed) {
                                 await projectService.deleteProject(projectId);
                                 if (currentProjectId === projectId) currentProjectId = null;
-                                initializeApp();
                             }
                         });
                         break;
@@ -971,10 +898,6 @@
             document.querySelectorAll('.main-panel').forEach(panel => panel.classList.remove('active'));
             const panelId = clickedNavItem.dataset.panel;
             document.getElementById(panelId).classList.add('active');
-
-            if (panelId === 'calendar-panel') renderCalendar();
-            if (panelId === 'contacts-panel') renderContacts();
-            if (panelId === 'invoices-panel') renderInvoices();
         });
 
         document.getElementById('project-tabs').addEventListener('click', (e) => {
@@ -997,9 +920,8 @@
                 confirmText: 'Add'
             }).then(async ({ confirmed, inputs }) => {
                 if (confirmed && inputs[0] && inputs[1]) {
-                    await projectService.addDocument(currentProjectId, { name: inputs[0], url: inputs[1] });
-                    allProjects = await projectService.getAll();
-                    renderDocuments(currentProjectId);
+                    const newDoc = { id: `doc_${crypto.randomUUID()}`, name: inputs[0], url: inputs[1] };
+                    await projectService.updateProjectSubcollection(currentProjectId, 'documents', newDoc);
                 }
             });
         });
@@ -1022,8 +944,6 @@
             }).then(async ({ confirmed, inputs }) => {
                 if (confirmed && inputs[0]) {
                     await projectService.addTeamMember(currentProjectId, inputs[0]);
-                    allProjects = await projectService.getAll();
-                    renderTeam(currentProjectId);
                 }
             });
         });
@@ -1040,8 +960,6 @@
                 }).then(async ({ confirmed }) => {
                     if (confirmed) {
                         await projectService.removeTeamMember(currentProjectId, contactId);
-                        allProjects = await projectService.getAll();
-                        renderTeam(currentProjectId);
                     }
                 });
             }
@@ -1055,9 +973,8 @@
                 confirmText: 'Add Log'
             }).then(async ({ confirmed, inputs }) => {
                 if (confirmed && inputs[0]) {
-                    await projectService.addCommLog(currentProjectId, inputs[0]);
-                    allProjects = await projectService.getAll();
-                    renderComms(currentProjectId);
+                    const newLog = { id: `comm_${crypto.randomUUID()}`, message: inputs[0], timestamp: new Date().toISOString() };
+                    await projectService.updateProjectSubcollection(currentProjectId, 'comms', newLog);
                 }
             });
         });
@@ -1093,8 +1010,6 @@
                 if (confirmed && inputs[0]) {
                     const [name, assignee, priority, startDate, endDate] = inputs;
                     await projectService.addTask(currentProjectId, { name, assignee, priority, startDate, endDate, description: '' });
-                    allProjects = await projectService.getAll();
-                    renderTasks(currentProjectId);
                 }
             });
         });
@@ -1138,8 +1053,6 @@
                     const taskId = draggedTask.dataset.taskId;
                     
                     await projectService.updateTaskStatus(currentProjectId, taskId, newStatus);
-                    allProjects = await projectService.getAll();
-                    renderTasks(currentProjectId);
                 }
             }
         });
@@ -1180,8 +1093,6 @@
                 if (confirmed) {
                     const [name, assignee, priority, startDate, endDate, description] = inputs;
                     await projectService.updateTask(currentProjectId, taskId, { name, assignee, priority, startDate, endDate, description });
-                    allProjects = await projectService.getAll();
-                    renderTasks(currentProjectId);
                 }
             });
         });
@@ -1198,7 +1109,6 @@
                 if (confirmed && inputs[0]) {
                     const [name, email, phone, company, whatsapp, wechat, signal] = inputs;
                     await contactService.add({ name, email, phone, company, whatsapp, wechat, signal });
-                    renderContacts();
                 }
             });
         });
@@ -1229,7 +1139,6 @@
                     if (confirmed) {
                         const [name, email, phone, company, whatsapp, wechat, signal] = inputs;
                         await contactService.update(contactId, { name, email, phone, company, whatsapp, wechat, signal });
-                        renderContacts();
                     }
                 });
             } else if (action === 'delete-contact') {
@@ -1241,7 +1150,6 @@
                 }).then(async ({ confirmed }) => {
                     if (confirmed) {
                         await contactService.delete(contactId);
-                        renderContacts();
                     }
                 });
             }
@@ -1253,9 +1161,7 @@
             }
             const contactOptions = allContacts.map(c => ({ value: c.id, text: c.name }));
             const statusOptions = [
-                { value: 'Draft', text: 'Draft' },
-                { value: 'Sent', text: 'Sent' },
-                { value: 'Paid', text: 'Paid' }
+                { value: 'Draft', text: 'Draft' }, { value: 'Sent', text: 'Sent' }, { value: 'Paid', text: 'Paid' }
             ];
             showModal({
                 title: 'Create New Invoice',
@@ -1270,7 +1176,6 @@
                 if (confirmed && inputs[0]) {
                     const [contactId, amount, dueDate, status] = inputs;
                     await invoiceService.add({ contactId, amount, dueDate, status });
-                    renderInvoices();
                 }
             });
         });
@@ -1302,7 +1207,6 @@
                     if (confirmed) {
                         const [contactId, amount, dueDate, status] = inputs;
                         await invoiceService.update(invoiceId, { contactId, amount, dueDate, status });
-                        renderInvoices();
                     }
                 });
             } else if (action === 'delete-invoice') {
@@ -1314,11 +1218,141 @@
                 }).then(async ({ confirmed }) => {
                     if (confirmed) {
                         await invoiceService.delete(invoiceId);
-                        renderInvoices();
                     }
                 });
             }
         });
+
+        document.getElementById('add-expense-btn').addEventListener('click', () => {
+            const categoryOptions = [
+                { value: 'Travel', text: 'Travel (Flug, Bahn, etc.)' },
+                { value: 'Hotel', text: 'Hotel' },
+                { value: 'Restaurant', text: 'Restaurant / Bewirtung' },
+                { value: 'Office Supplies', text: 'Office Supplies' },
+                { value: 'Other', text: 'Other' }
+            ];
+            showModal({
+                title: 'Add New Expense',
+                inputs: [
+                    { label: 'Description (e.g., "Flight to Berlin")' },
+                    { label: 'Amount (€)', type: 'number' },
+                    { label: 'Date', type: 'date' },
+                    { label: 'Category', type: 'select', options: categoryOptions }
+                ],
+                confirmText: 'Add Expense'
+            }).then(async ({ confirmed, inputs }) => {
+                if (confirmed && inputs[0]) {
+                    const [description, amount, date, category] = inputs;
+                    await expenseService.add({ description, amount, date, category });
+                }
+            });
+        });
+
+        document.getElementById('expense-list').addEventListener('click', (e) => {
+            const actionTarget = e.target.closest('[data-action]');
+            if (!actionTarget) return;
+
+            const action = actionTarget.dataset.action;
+            const expenseItem = actionTarget.closest('.expense-item');
+            const expenseId = expenseItem.dataset.expenseId;
+            const expense = allExpenses.find(ex => ex.id === expenseId);
+
+            if (action === 'edit-expense') {
+                const categoryOptions = [
+                    { value: 'Travel', text: 'Travel (Flug, Bahn, etc.)' },
+                    { value: 'Hotel', text: 'Hotel' },
+                    { value: 'Restaurant', text: 'Restaurant / Bewirtung' },
+                    { value: 'Office Supplies', text: 'Office Supplies' },
+                    { value: 'Other', text: 'Other' }
+                ];
+                 showModal({
+                    title: 'Edit Expense',
+                    inputs: [
+                        { label: 'Description', value: expense.description },
+                        { label: 'Amount (€)', type: 'number', value: expense.amount },
+                        { label: 'Date', type: 'date', value: expense.date },
+                        { label: 'Category', type: 'select', options: categoryOptions, value: expense.category }
+                    ],
+                    confirmText: 'Save Changes'
+                }).then(async ({ confirmed, inputs }) => {
+                    if (confirmed) {
+                        const [description, amount, date, category] = inputs;
+                        await expenseService.update(expenseId, { description, amount, date, category });
+                    }
+                });
+            } else if (action === 'delete-expense') {
+                showModal({
+                    title: 'Delete Expense',
+                    message: 'Are you sure you want to delete this expense?',
+                    confirmText: 'Delete',
+                    danger: true
+                }).then(async ({ confirmed }) => {
+                    if (confirmed) {
+                        await expenseService.delete(expenseId);
+                    }
+                });
+            }
+        });
+
+         document.getElementById('export-expenses-btn').addEventListener('click', () => {
+            showModal({
+                title: 'Export Expense Report',
+                inputs: [{
+                    label: 'Select Period',
+                    type: 'select',
+                    options: [
+                        { value: 'week', text: 'This Week' },
+                        { value: 'month', text: 'This Month' },
+                        { value: 'year', text: 'This Year' }
+                    ]
+                }],
+                confirmText: 'Download CSV'
+            }).then(({ confirmed, inputs }) => {
+                if (confirmed) {
+                    exportExpenses(inputs[0]);
+                }
+            });
+        });
+
+        function exportExpenses(period) {
+            const now = new Date();
+            let startDate;
+
+            if (period === 'week') {
+                startDate = new Date(now.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1))); // Monday of current week
+            } else if (period === 'month') {
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            } else { // year
+                startDate = new Date(now.getFullYear(), 0, 1);
+            }
+            startDate.setHours(0,0,0,0);
+
+            const filteredExpenses = allExpenses.filter(ex => new Date(ex.date) >= startDate);
+
+            if (filteredExpenses.length === 0) {
+                return alert('No expenses found for the selected period.');
+            }
+
+            const headers = ['Date', 'Description', 'Category', 'Amount'];
+            const rows = filteredExpenses.map(ex => [
+                formatDateGerman(ex.date),
+                `"${ex.description.replace(/"/g, '""')}"`, // Handle quotes
+                ex.category,
+                ex.amount
+            ]);
+
+            let csvContent = "data:text/csv;charset=utf-8," 
+                + headers.join(',') + '\n' 
+                + rows.map(e => e.join(',')).join('\n');
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `expenses_${period}_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
 
         // Calendar Navigation
         document.getElementById('prev-month-btn').addEventListener('click', () => {
@@ -1330,42 +1364,95 @@
             renderCalendar();
         });
 
-        // --- INITIALIZATION ---
-        async function initializeApp() {
-            let existingProjects = await projectService.getAll();
-            let needsSave = false;
-            existingProjects.forEach(p => {
-                if (!p.icon) {
-                    p.icon = getIconForProjectName(p.name);
-                    needsSave = true;
-                }
-            });
-            if (needsSave) {
-                await projectService.saveAll(existingProjects);
-            }
+        // --- AUTHENTICATION ---
+        let isLogin = true;
 
-            if (existingProjects.length === 0) {
-                 await projectService.add({ name: 'Main Project Alpha' });
-                 existingProjects = await projectService.getAll();
-            }
+        authToggle.addEventListener('click', () => {
+            isLogin = !isLogin;
+            authTitle.textContent = isLogin ? 'Login' : 'Sign Up';
+            authSubmitBtn.textContent = isLogin ? 'Login' : 'Sign Up';
+            authToggle.textContent = isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login";
+            authError.textContent = '';
+        });
 
-            allProjects = existingProjects;
-            await renderProjectTree();
-            
-            if (!currentProjectId && allProjects.length > 0) {
-                 const firstProjectId = allProjects.find(p => !p.parentId)?.id || allProjects[0].id;
-                 selectProject(firstProjectId);
-            } else if (allProjects.length === 0) {
-                selectProject(null);
+        authForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = authEmail.value;
+            const password = authPassword.value;
+            authError.textContent = '';
+
+            if (isLogin) {
+                signInWithEmailAndPassword(auth, email, password)
+                    .catch(error => authError.textContent = error.message);
             } else {
-                selectProject(currentProjectId);
+                createUserWithEmailAndPassword(auth, email, password)
+                    .catch(error => authError.textContent = error.message);
             }
-            renderCalendar();
-            renderContacts();
-            renderInvoices();
-        }
+        });
 
-        initializeApp();
+        logoutBtn.addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        // --- INITIALIZATION ---
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                // User is signed in.
+                currentUserId = user.uid;
+                authContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                
+                // Clear any old listeners
+                unsubscribeListeners.forEach(unsub => unsub());
+                unsubscribeListeners = [];
+
+                // Set up real-time listeners
+                const collections = ['projects', 'contacts', 'invoices', 'expenses'];
+                collections.forEach(coll => {
+                    const unsub = onSnapshot(getCollectionRef(coll), snapshot => {
+                        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        window[`all${coll.charAt(0).toUpperCase() + coll.slice(1)}`] = data;
+                        
+                        // Re-render relevant parts of the UI
+                        if (coll === 'projects') {
+                            renderProjectTree();
+                            if (currentProjectId) selectProject(currentProjectId);
+                        }
+                        if (coll === 'contacts') {
+                            renderContacts();
+                            if (currentProjectId) renderTeam(currentProjectId);
+                        }
+                        if (coll === 'invoices') renderInvoices();
+                        if (coll === 'expenses') renderExpenses();
+                    });
+                    unsubscribeListeners.push(unsub);
+                });
+
+                initializeAppState();
+
+            } else {
+                // User is signed out.
+                currentUserId = null;
+                authContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+                unsubscribeListeners.forEach(unsub => unsub());
+                unsubscribeListeners = [];
+                // Clear local state
+                allProjects = []; allContacts = []; allInvoices = []; allExpenses = [];
+            }
+        });
+
+        async function initializeAppState() {
+            const projectsSnapshot = await getDocs(getCollectionRef('projects'));
+            if (projectsSnapshot.empty) {
+                 await projectService.add({ name: 'Main Project Alpha' });
+            } else {
+                if (!currentProjectId) {
+                    const firstProjectId = allProjects.find(p => !p.parentId)?.id || allProjects[0]?.id;
+                    if (firstProjectId) selectProject(firstProjectId);
+                }
+            }
+        }
     </script>
 </body>
 </html>
