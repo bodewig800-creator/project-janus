@@ -55,9 +55,9 @@
         }
         #sidebar { width: 300px; border: 1px solid #ccc; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; }
         #main-nav { list-style: none; padding: 0; margin: 0; }
-        .main-nav-item { padding: 12px 8px; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: 500; }
-        .main-nav-item:hover { background-color: #f0f0f0; }
-        .main-nav-item.active { background-color: #e0e0ff; font-weight: bold; }
+        .main-nav-item > span { display: block; padding: 12px 8px; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: 500; }
+        .main-nav-item:hover > span { background-color: #f0f0f0; }
+        .main-nav-item.active > span { background-color: #e0e0ff; font-weight: bold; }
         #project-tree-container { padding-left: 20px; }
         #project-tree { list-style: none; padding: 0; margin-top: 10px; }
         #project-tree ul { list-style: none; padding-left: 20px; }
@@ -172,18 +172,20 @@
         <div id="sidebar">
             <h2>Janus</h2>
             <ul id="main-nav">
-                <li class="main-nav-item active" data-panel="project-panel">📁 Projects</li>
-                <div id="project-tree-container">
-                     <div class="sidebar-actions">
-                        <button id="new-project-btn">New Project</button>
+                <li class="main-nav-item active">
+                    <span data-panel="project-panel">📁 Projects</span>
+                    <div id="project-tree-container">
+                         <div class="sidebar-actions">
+                            <button id="new-project-btn">New Project</button>
+                        </div>
+                        <p><small>Select a project to create a sub-project under it.</small></p>
+                        <ul id="project-tree"></ul>
                     </div>
-                    <p><small>Select a project to create a sub-project under it.</small></p>
-                    <ul id="project-tree"></ul>
-                </div>
-                <li class="main-nav-item" data-panel="calendar-panel">📅 Calendar</li>
-                <li class="main-nav-item" data-panel="contacts-panel">👥 Contacts</li>
-                <li class="main-nav-item" data-panel="invoices-panel">🧾 Invoices</li>
-                <li class="main-nav-item" data-panel="expenses-panel">💶 Expenses</li>
+                </li>
+                <li class="main-nav-item"><span data-panel="calendar-panel">📅 Calendar</span></li>
+                <li class="main-nav-item"><span data-panel="contacts-panel">👥 Contacts</span></li>
+                <li class="main-nav-item"><span data-panel="invoices-panel">🧾 Invoices</span></li>
+                <li class="main-nav-item"><span data-panel="expenses-panel">💶 Expenses</span></li>
             </ul>
             <button id="logout-btn">Logout</button>
         </div>
@@ -984,11 +986,11 @@
         });
         
         document.getElementById('main-nav').addEventListener('click', (e) => {
-            const clickedNavItem = e.target.closest('.main-nav-item');
+            const clickedNavItem = e.target.closest('.main-nav-item > span');
             if (!clickedNavItem) return;
 
             document.querySelectorAll('.main-nav-item').forEach(item => item.classList.remove('active'));
-            clickedNavItem.classList.add('active');
+            clickedNavItem.parentElement.classList.add('active');
 
             document.querySelectorAll('.main-panel').forEach(panel => panel.classList.remove('active'));
             const panelId = clickedNavItem.dataset.panel;
@@ -1563,13 +1565,20 @@
                         window[`all${coll.charAt(0).toUpperCase() + coll.slice(1)}`] = data;
                         
                         // Re-render relevant parts of the UI
-                        if (coll === 'projects') renderProjectTree();
-                        if (coll === 'contacts') { renderContacts(); renderInvoices(); }
-                        if (coll === 'invoices') renderInvoices();
-                        if (coll === 'expenses') renderExpenses();
-                        if (coll === 'events') renderCalendar();
-                        
-                        if (currentProjectId) selectProject(currentProjectId);
+                        if (coll === 'projects') {
+                            renderProjectTree();
+                            if (currentProjectId) selectProject(currentProjectId);
+                        } else if (coll === 'contacts') {
+                            renderContacts();
+                            renderInvoices();
+                            if (currentProjectId) renderTeam(currentProjectId);
+                        } else if (coll === 'invoices') {
+                            renderInvoices();
+                        } else if (coll === 'expenses') {
+                            renderExpenses();
+                        } else if (coll === 'events') {
+                            renderCalendar();
+                        }
                     });
                     unsubscribeListeners.push(unsub);
                 });
