@@ -1402,28 +1402,29 @@
                 authContainer.classList.add('hidden');
                 appContainer.classList.remove('hidden');
                 
-                // Clear any old listeners
                 unsubscribeListeners.forEach(unsub => unsub());
                 unsubscribeListeners = [];
 
-                // Set up real-time listeners
                 const collections = ['projects', 'contacts', 'invoices', 'expenses'];
                 collections.forEach(coll => {
                     const unsub = onSnapshot(getCollectionRef(coll), snapshot => {
                         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        window[`all${coll.charAt(0).toUpperCase() + coll.slice(1)}`] = data;
                         
-                        // Re-render relevant parts of the UI
                         if (coll === 'projects') {
+                            allProjects = data;
                             renderProjectTree();
                             if (currentProjectId) selectProject(currentProjectId);
-                        }
-                        if (coll === 'contacts') {
+                        } else if (coll === 'contacts') {
+                            allContacts = data;
                             renderContacts();
                             if (currentProjectId) renderTeam(currentProjectId);
+                        } else if (coll === 'invoices') {
+                            allInvoices = data;
+                            renderInvoices();
+                        } else if (coll === 'expenses') {
+                            allExpenses = data;
+                            renderExpenses();
                         }
-                        if (coll === 'invoices') renderInvoices();
-                        if (coll === 'expenses') renderExpenses();
                     });
                     unsubscribeListeners.push(unsub);
                 });
@@ -1437,13 +1438,25 @@
                 appContainer.classList.add('hidden');
                 unsubscribeListeners.forEach(unsub => unsub());
                 unsubscribeListeners = [];
-                // Clear local state
                 allProjects = []; allContacts = []; allInvoices = []; allExpenses = [];
             }
         });
 
         async function initializeAppState() {
             const projectsSnapshot = await getDocs(getCollectionRef('projects'));
+            let needsSave = false;
+            const batch = writeBatch(db);
+            projectsSnapshot.docs.forEach(doc => {
+                const project = {id: doc.id, ...doc.data()};
+                if (!project.icon) {
+                    const newIcon = getIconForProjectName(project.name);
+                    batch.update(doc.ref, { icon: newIcon });
+                    needsSave = true;
+                }
+            });
+            if (needsSave) await batch.commit();
+
+
             if (projectsSnapshot.empty) {
                  await projectService.add({ name: 'Main Project Alpha' });
             } else {
